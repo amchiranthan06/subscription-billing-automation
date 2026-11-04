@@ -1,23 +1,38 @@
 import os
+from typing import Optional
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+    # Project Info
     PROJECT_NAME: str = "BillFlow Subscription Billing System"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
-    
-    # Database: Defaults to SQLite for immediate local dev, easily swappable to PostgreSQL
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./billflow.db")
-    
-    # Financial & Currency Defaults
+    ENVIRONMENT: str = "development"
+
+    # PostgreSQL Configuration
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: str = "5432"
+    POSTGRES_DB: str = "billflow_db"
+
+    # Full Database Connection String
+    DATABASE_URL: Optional[str] = None
+
+    def get_database_url(self) -> str:
+        """Returns the PostgreSQL connection string."""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    # Business Defaults
     DEFAULT_CURRENCY: str = "USD"
     DEFAULT_TRIAL_DAYS: int = 14
-    
-    # Dunning / Retry Schedule in Days (e.g., Retry 1 on Day 1, Retry 2 on Day 3, Retry 3 on Day 7)
     RETRY_SCHEDULE_DAYS: list[int] = [1, 3, 7]
-    
+
     class Config:
         env_file = ".env"
-        case_sensitive = True
+        env_file_encoding = "utf-8"
+        extra = "ignore"
 
 settings = Settings()
