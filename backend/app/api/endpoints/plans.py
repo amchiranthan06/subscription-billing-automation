@@ -23,7 +23,8 @@ def create_plan(plan_in: PlanCreate, db: Session = Depends(get_db)):
         currency=plan_in.currency,
         billing_interval=plan_in.billing_interval,
         trial_days=plan_in.trial_days,
-        feature_entitlements=plan_in.feature_entitlements or {},
+        features=plan_in.features or plan_in.feature_entitlements or {},
+        feature_entitlements=plan_in.feature_entitlements or plan_in.features or {},
         is_active=True
     )
     db.add(plan)

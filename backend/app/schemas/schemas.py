@@ -11,6 +11,7 @@ from app.models.enums import (
 class CustomerBase(BaseModel):
     name: str = Field(..., example="Acme Corp")
     email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", example="billing@acmecorp.com")
+    company_name: Optional[str] = Field(default=None, example="Acme Inc.")
     country: str = Field(default="US", example="US")
     currency: str = Field(default="USD", example="USD")
 
@@ -34,7 +35,8 @@ class PlanBase(BaseModel):
     currency: str = Field(default="USD")
     billing_interval: BillingInterval = BillingInterval.MONTHLY
     trial_days: int = Field(default=14, ge=0)
-    feature_entitlements: Optional[dict[str, Any]] = {}
+    features: Optional[dict[str, Any]] = Field(default_factory=dict)
+    feature_entitlements: Optional[dict[str, Any]] = Field(default_factory=dict)
 
 class PlanCreate(PlanBase):
     pass

@@ -18,6 +18,7 @@ def create_customer(customer_in: CustomerCreate, db: Session = Depends(get_db)):
     customer = Customer(
         name=customer_in.name,
         email=customer_in.email,
+        company_name=customer_in.company_name,
         country=customer_in.country,
         currency=customer_in.currency,
         payment_method_id=customer_in.payment_method_id or "pm_mock_card_valid"
