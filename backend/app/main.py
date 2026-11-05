@@ -31,10 +31,6 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_tags=[
         {
-            "name": "Health & Database",
-            "description": "Endpoints for verifying server health and PostgreSQL connectivity."
-        },
-        {
             "name": "Plans",
             "description": "Create, update, and manage subscription pricing tiers."
         },
@@ -80,32 +76,24 @@ def startup_event():
 # Mount API routers under /api/v1
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-@app.get("/", tags=["Health & Database"])
+@app.get("/", include_in_schema=False)
 def root():
-    """Root endpoint providing system information and documentation links."""
     return {
         "system": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
         "status": "operational",
-        "swagger_docs": "/docs",
-        "redoc_docs": "/redoc"
+        "documentation": "/docs"
     }
 
-@app.get("/health", tags=["Health & Database"])
+@app.get("/health", include_in_schema=False)
 def health_check():
-    """General health check of the FastAPI service."""
     return {
         "status": "healthy",
         "service": "FastAPI",
         "version": settings.VERSION
     }
 
-@app.get("/health/db", tags=["Health & Database"])
+@app.get("/health/db", include_in_schema=False)
 def database_health_check():
-    """
-    Directly tests the PostgreSQL database connection by executing 'SELECT 1'.
-    Returns detailed connection diagnostics.
-    """
-    connection_status = check_db_connection()
-    return connection_status
+    return check_db_connection()
