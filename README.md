@@ -57,6 +57,25 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Task 4: Subscription Status State Machine ✅
+* **Objective**: Implement valid subscription lifecycle transitions.
+* **Allowed States**: `trial`, `active`, `past_due`, `cancelled`.
+* **Valid Transitions Enforced**:
+  - `trial -> active` (Trial converted to active subscription upon payment)
+  - `trial -> cancelled` (Subscription cancelled during trial)
+  - `active -> past_due` (Payment failure on renewal)
+  - `active -> cancelled` (Active customer cancellation)
+  - `past_due -> active` (Recovery payment succeeded)
+  - `past_due -> cancelled` (Retries exhausted or terminal cancellation)
+* **Requirements Completed**:
+  - **Prevent Invalid Transitions**: Attempts to perform illegal transitions (e.g. `cancelled -> active` or `trial -> past_due`) raise `InvalidStateTransitionError` with an HTTP 400 Bad Request error.
+  - **Status Change Timestamps**: Automatically updates `updated_at` and `cancelled_at` timestamps on state mutations.
+  - **Immutable Audit Trail**: Appends detailed transition logs to the `AuditLog` table with old status, new status, transition reason, and actor.
+  - **API Endpoint**: `PATCH /api/v1/subscriptions/{id}/status` allows testing transitions directly in Swagger UI.
+* **Deliverable**: Robust state machine engine verified via 9 automated unit tests and interactive REST endpoints.
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -91,4 +110,10 @@ python backend/tests/test_database_schema.py
 
 # Run JWT Authentication Tests (3 tests)
 python backend/tests/test_auth.py
+
+# Run Subscription State Machine Tests (9 tests)
+python backend/tests/test_state_machine.py
+
+# Or run all 21 tests together:
+python -m unittest discover backend/tests
 ```

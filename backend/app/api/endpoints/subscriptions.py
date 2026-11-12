@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.models.models import Customer, Plan, Subscription, BillingCycle, AuditLog
 from app.models.enums import SubscriptionStatus, BillingInterval, CancellationTiming
 from app.schemas.schemas import (
-    SubscriptionCreate, SubscriptionResponse, SubscriptionCancel
+    SubscriptionCreate, SubscriptionResponse, SubscriptionCancel, SubscriptionStatusTransition
 )
 from app.services.state_machine import transition_subscription, InvalidStateTransitionError
 
@@ -172,6 +172,35 @@ def cancel_subscription(
             target_status=SubscriptionStatus.CANCELLED,
             reason=cancel_in.reason,
             actor="customer"
+        )
+        return updated
+    except InvalidStateTransitionError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.patch("/{subscription_id}/status", response_model=SubscriptionResponse)
+def update_subscription_status(
+    subscription_id: str,
+    transition_in: SubscriptionStatusTransition,
+    db: Session = Depends(get_db)
+):
+    """
+    Task 4: Enforces valid subscription lifecycle transitions:
+    - trial -> active, cancelled
+    - active -> past_due, cancelled
+    - past_due -> active, cancelled
+    - Blocks all illegal transitions and records status timestamps.
+    """
+    sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+
+    try:
+        updated = transition_subscription(
+            db=db,
+            subscription=sub,
+            target_status=transition_in.target_status,
+            reason=transition_in.reason,
+            actor="admin"
         )
         return updated
     except InvalidStateTransitionError as e:

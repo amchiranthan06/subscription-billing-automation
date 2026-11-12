@@ -96,6 +96,10 @@ class SubscriptionCancel(BaseModel):
     timing: CancellationTiming = CancellationTiming.IMMEDIATE
     reason: Optional[str] = "Customer requested cancellation"
 
+class SubscriptionStatusTransition(BaseModel):
+    target_status: SubscriptionStatus
+    reason: Optional[str] = Field(default="Status transition requested", example="Payment succeeded on trial end")
+
 class SubscriptionResponse(BaseModel):
     id: str
     customer_id: str
