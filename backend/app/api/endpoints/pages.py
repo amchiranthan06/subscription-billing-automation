@@ -5,7 +5,7 @@ router = APIRouter(prefix="/auth", tags=["Auth UI Pages (Task 3)"])
 
 COMMON_STYLES = """
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>body { font-family: 'Inter', sans-serif; }</style>
 """
 
@@ -16,18 +16,18 @@ def signup_page():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Sign Up — BillFlow</title>
+        <title>Sign Up — Creation of Subscription Billing Automation System using Recurring Revenue Model</title>
         {COMMON_STYLES}
     </head>
     <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div class="max-w-lg w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
             <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 font-bold text-xl">BF</div>
-            <h2 class="text-2xl font-bold text-slate-800 text-center">Create an Account</h2>
-            <p class="text-slate-500 text-sm text-center mt-1">Sign up to access BillFlow Subscription Manager</p>
+            <h1 class="text-xl font-bold text-slate-900 text-center leading-snug">Creation of Subscription Billing Automation System using Recurring Revenue Model</h1>
+            <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider text-center mt-2 mb-4">User Authentication — Sign Up</p>
             
-            <div id="error-msg" class="hidden mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
+            <div id="error-msg" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
 
-            <form id="signup-form" class="mt-6 space-y-4">
+            <form id="signup-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Full Name</label>
                     <input type="text" id="name" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Jane Doe">
@@ -86,18 +86,18 @@ def signin_page():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Sign In — BillFlow</title>
+        <title>Sign In — Creation of Subscription Billing Automation System using Recurring Revenue Model</title>
         {COMMON_STYLES}
     </head>
     <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div class="max-w-lg w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
             <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 font-bold text-xl">BF</div>
-            <h2 class="text-2xl font-bold text-slate-800 text-center">Welcome Back</h2>
-            <p class="text-slate-500 text-sm text-center mt-1">Sign in to your BillFlow account</p>
+            <h1 class="text-xl font-bold text-slate-900 text-center leading-snug">Creation of Subscription Billing Automation System using Recurring Revenue Model</h1>
+            <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider text-center mt-2 mb-4">User Authentication — Sign In</p>
             
-            <div id="error-msg" class="hidden mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
+            <div id="error-msg" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
 
-            <form id="signin-form" class="mt-6 space-y-4">
+            <form id="signin-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Email Address</label>
                     <input type="email" id="email" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="jane@example.com">
@@ -151,7 +151,7 @@ def home_page():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Home — BillFlow</title>
+        <title>User Profile — Creation of Subscription Billing Automation System using Recurring Revenue Model</title>
         {COMMON_STYLES}
     </head>
     <body class="bg-slate-50 min-h-screen">
@@ -159,54 +159,40 @@ def home_page():
         <nav class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-9 h-9 bg-purple-600 text-white rounded-lg flex items-center justify-center font-bold text-sm">BF</div>
-                <span class="font-bold text-slate-800 text-lg">BillFlow</span>
+                <span class="font-bold text-slate-900 text-sm md:text-base">Creation of Subscription Billing Automation System using Recurring Revenue Model</span>
             </div>
-            <div class="flex items-center space-x-4">
-                <a href="/docs" target="_blank" class="text-xs text-purple-600 font-semibold hover:underline">Open API Docs ↗</a>
-                <button onclick="logout()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition">Sign Out</button>
-            </div>
+            <button onclick="logout()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition">Sign Out</button>
         </nav>
 
-        <!-- Main Content Container -->
-        <main class="max-w-4xl mx-auto py-12 px-4">
+        <!-- Main Content Container: ONLY User Authentication Profile -->
+        <main class="max-w-2xl mx-auto py-12 px-4">
             <div id="loading" class="text-center text-slate-500 py-12">Verifying JWT authentication...</div>
 
             <div id="content" class="hidden space-y-6">
-                <!-- Welcome Card -->
+                <!-- User Profile Card -->
                 <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-                    <div class="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full mb-3">
-                        ✓ JWT Authenticated Session
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-xl">✓</div>
+                    <div class="text-center mb-6">
+                        <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200 mb-2">
+                            JWT Authenticated Session
+                        </span>
+                        <h1 class="text-2xl font-bold text-slate-800">Welcome, <span id="user-name">User</span>!</h1>
+                        <p class="text-slate-500 text-xs mt-1">Authenticated user details:</p>
                     </div>
-                    <h1 class="text-2xl font-bold text-slate-800">Welcome, <span id="user-name">User</span>!</h1>
-                    <p class="text-slate-500 text-sm mt-1">You are securely signed in using JSON Web Token (JWT) authentication.</p>
                     
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-                        <div class="p-4 bg-slate-50 rounded-xl">
-                            <span class="block text-xs font-semibold text-slate-500 uppercase">User Email</span>
-                            <span id="user-email" class="font-medium text-slate-800 text-sm break-all">-</span>
+                    <div class="space-y-3 pt-4 border-t border-slate-100 text-sm">
+                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                            <span class="text-slate-500 font-medium">User Email</span>
+                            <span id="user-email" class="font-semibold text-slate-800 break-all">-</span>
                         </div>
-                        <div class="p-4 bg-slate-50 rounded-xl">
-                            <span class="block text-xs font-semibold text-slate-500 uppercase">Account Role</span>
-                            <span id="user-role" class="font-medium text-slate-800 text-sm capitalize">-</span>
+                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                            <span class="text-slate-500 font-medium">Account Role</span>
+                            <span id="user-role" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 uppercase">-</span>
                         </div>
-                        <div class="p-4 bg-slate-50 rounded-xl">
-                            <span class="block text-xs font-semibold text-slate-500 uppercase">Member Since</span>
-                            <span id="user-created" class="font-medium text-slate-800 text-sm">-</span>
+                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                            <span class="text-slate-500 font-medium">Account Created</span>
+                            <span id="user-created" class="font-semibold text-slate-800">-</span>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Next Tasks Quick Links -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 class="font-bold text-slate-800 text-sm">📋 Interactive Swagger UI</h3>
-                        <p class="text-xs text-slate-500 mt-1">Test your live API routes directly from the interactive docs.</p>
-                        <a href="/docs" target="_blank" class="inline-block mt-4 text-xs font-semibold text-purple-600 hover:underline">Explore APIs →</a>
-                    </div>
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 class="font-bold text-slate-800 text-sm">🔒 Token Security Details</h3>
-                        <p class="text-xs text-slate-500 mt-1">Algorithm: HS256 • Stored in Browser localStorage • Valid 24 Hours</p>
-                        <span class="inline-block mt-4 text-xs font-semibold text-green-600">Active & Valid</span>
                     </div>
                 </div>
             </div>
