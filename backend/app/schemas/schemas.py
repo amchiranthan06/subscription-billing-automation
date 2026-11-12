@@ -51,32 +51,34 @@ class CustomerResponse(CustomerBase):
     class Config:
         from_attributes = True
 
-# ----------------- PLAN SCHEMAS -----------------
+# ----------------- 1. PLAN SCHEMAS (TASK 2 & TASK 5) -----------------
 class PlanBase(BaseModel):
     name: str = Field(..., example="Pro Plan")
-    code: str = Field(..., example="pro")
+    code: Optional[str] = Field(default=None, example="pro")
     description: Optional[str] = "For growing teams and scaling startups"
     price: Decimal = Field(..., gt=0, example=29.00)
     currency: str = Field(default="USD")
     billing_interval: BillingInterval = BillingInterval.MONTHLY
     trial_days: int = Field(default=14, ge=0)
     features: Optional[dict[str, Any]] = Field(default_factory=dict)
-    feature_entitlements: Optional[dict[str, Any]] = Field(default_factory=dict)
 
 class PlanCreate(PlanBase):
     pass
 
 class PlanUpdate(BaseModel):
     name: Optional[str] = None
-    description: Optional[str] = None
     price: Optional[Decimal] = None
+    billing_interval: Optional[BillingInterval] = None
+    trial_days: Optional[int] = None
+    features: Optional[dict[str, Any]] = None
+    description: Optional[str] = None
     is_active: Optional[bool] = None
-    feature_entitlements: Optional[dict[str, Any]] = None
 
 class PlanResponse(PlanBase):
     id: str
     is_active: bool
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

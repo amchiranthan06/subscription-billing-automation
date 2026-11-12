@@ -76,6 +76,19 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Task 5: Plan Management APIs ✅
+* **Objective**: Create APIs to manage subscription plans.
+* **APIs Implemented**:
+  - **Create Plan**: `POST /api/v1/plans` (validates unique code, sets pricing, trial duration, features JSON, records audit log)
+  - **List Plans**: `GET /api/v1/plans` (retrieves all plans with optional `active_only` filter)
+  - **Get Plan**: `GET /api/v1/plans/{id}` (fetches single plan details)
+  - **Update Plan**: `PUT /api/v1/plans/{id}` (updates pricing, features, entitlements with change tracking)
+  - **Archive Plan**: `PATCH /api/v1/plans/{id}/archive` (safely deactivates plan so no new subscriptions can be created)
+  - **DELETE Plan**: `DELETE /api/v1/plans/{id}` (deletes unused plans; guards against deleting plans with active subscriptions)
+* **Deliverable**: Complete plan lifecycle management verified via 4 automated unit tests and interactive Swagger UI.
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -114,6 +127,9 @@ python backend/tests/test_auth.py
 # Run Subscription State Machine Tests (9 tests)
 python backend/tests/test_state_machine.py
 
-# Or run all 21 tests together:
+# Run Plan Management API Tests (4 tests)
+python backend/tests/test_plans_api.py
+
+# Or run all 25 tests together:
 python -m unittest discover backend/tests
 ```
