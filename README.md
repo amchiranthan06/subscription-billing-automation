@@ -20,25 +20,22 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ### Task 2: Database Design ✅
 * **Objective**: Design all core billing tables with relational integrity and automated timestamps.
-* **Requirements Completed (7 Core Models)**:
-  1. **Plans**: Defines subscription tiers.
-     - `name`: Plan title (e.g., "Starter Plan", "Pro Plan")
-     - `price`: Plan amount with decimal precision
-     - `billing_interval`: `monthly` or `annual`
-     - `trial_days`: Configurable trial duration (default 14 days)
-     - `features`: JSON field for feature entitlements
-     - `created_at` & `updated_at`: Automatic timestamp tracking
-  2. **Customers**: Subscriber account profiles.
-     - `name`: Customer name
-     - `email`: Unique indexed customer email
-     - `company_name`: Business or organization name
-     - `created_at` & `updated_at`: Registration and update timestamps
-  3. **Subscriptions**: Tracks lifecycle states (`trial`, `active`, `past_due`, `paused`, `cancelled`) and billing period dates.
-  4. **BillingCycles**: Manages recurring cycles, start/end dates, and due dates.
-  5. **Invoices**: Itemized financial statements with unique numbering (`INV-XXXX`), tax calculation, and payment status.
-  6. **Payments**: Records transaction attempts, gateway references, and retry counters.
-  7. **AuditLogs**: Immutable compliance ledger recording state transitions and actor details.
-* **Deliverable**: All 7 models designed, mapped with foreign keys, and validated via automated schema inspection tests.
+* **Requirements Completed (7 Core Models & Exact Attributes)**:
+  1. **Plans**:
+     - `name`, `price`, `billing_interval`, `trial_days`, `features`, `created_at`, `updated_at`
+  2. **Customers**:
+     - `name`, `email`, `company_name`, `created_at`, `updated_at`
+  3. **Subscriptions**:
+     - `customer_id`, `plan_id`, `status`, `start_date`, `end_date`, `created_at`, `updated_at`
+  4. **Billing Cycles**:
+     - `subscription_id`, `cycle_start_date`, `cycle_end_date`, `renewal_date`, `status` (pending/completed), `created_at`, `updated_at`
+  5. **Invoices**:
+     - `invoice_number`, `subscription_id`, `customer_id`, `invoice_date`, `due_date`, `subtotal`, `tax_amount`, `total_amount`, `status` (draft/paid/unpaid/void)
+  6. **Payments**:
+     - `invoice_id`, `payment_reference`, `amount`, `payment_method`, `status` (pending/success/failed/refunded), `payment_date`, `created_at`, `updated_at`
+  7. **Audit Logs**:
+     - `entity_type` (plan/subscription/invoice/payment), `entity_id`, `action`, `old_value`, `new_value`, `performed_by`, `created_at`
+* **Deliverable**: All 7 models designed, mapped with foreign keys, and validated via 8 automated schema inspection tests.
 
 ---
 
@@ -75,6 +72,6 @@ python backend/tests/test_database_schema.py
 ```
 Outputs:
 ```text
-Ran 3 tests in 0.076s - OK
+Ran 8 tests in 0.060s - OK
 ```
-*(Confirms all 7 tables and required fields exist in the schema).*
+*(Confirms all 7 tables and all required fields exist in the schema).*

@@ -4,26 +4,34 @@ class SubscriptionStatus(str, enum.Enum):
     TRIAL = "trial"
     ACTIVE = "active"
     PAST_DUE = "past_due"
-    PAUSED = "paused"
     CANCELLED = "cancelled"
+    PAUSED = "paused"
 
 class BillingInterval(str, enum.Enum):
     MONTHLY = "monthly"
     ANNUAL = "annual"
 
+class BillingCycleStatus(str, enum.Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+
 class InvoiceStatus(str, enum.Enum):
     DRAFT = "draft"
-    OPEN = "open"
     PAID = "paid"
-    PAST_DUE = "past_due"
+    UNPAID = "unpaid"
     VOID = "void"
-    UNCOLLECTIBLE = "uncollectible"
 
 class PaymentStatus(str, enum.Enum):
     PENDING = "pending"
-    SUCCEEDED = "succeeded"
+    SUCCESS = "success"
     FAILED = "failed"
     REFUNDED = "refunded"
+
+class EntityType(str, enum.Enum):
+    PLAN = "plan"
+    SUBSCRIPTION = "subscription"
+    INVOICE = "invoice"
+    PAYMENT = "payment"
 
 class CancellationTiming(str, enum.Enum):
     IMMEDIATE = "immediate"

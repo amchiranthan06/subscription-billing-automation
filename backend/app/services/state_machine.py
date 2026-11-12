@@ -66,15 +66,16 @@ def transition_subscription(
     elif target_status == SubscriptionStatus.ACTIVE and old_status == SubscriptionStatus.PAUSED:
         subscription.paused_at = None
 
-    # Audit Log creation
+    # Audit Log creation matching exact Task 2 fields
     audit_entry = AuditLog(
+        entity_type="subscription",
+        entity_id=subscription.id,
+        action=f"state_changed_to_{target_status.value}",
+        old_value={"status": old_status.value},
+        new_value={"status": target_status.value, "reason": reason},
+        performed_by=actor,
         customer_id=subscription.customer_id,
-        subscription_id=subscription.id,
-        event_type=f"subscription.state_changed.{target_status.value}",
-        old_state={"status": old_status.value},
-        new_state={"status": target_status.value},
-        actor=actor,
-        description=f"State transitioned from {old_status.value} to {target_status.value}. Reason: {reason}"
+        subscription_id=subscription.id
     )
     db.add(audit_entry)
     db.commit()

@@ -28,11 +28,13 @@ def create_customer(customer_in: CustomerCreate, db: Session = Depends(get_db)):
     db.refresh(customer)
 
     audit = AuditLog(
-        customer_id=customer.id,
-        event_type="customer.created",
-        new_state={"email": customer.email, "name": customer.name},
-        actor="system",
-        description=f"Customer '{customer.name}' registered."
+        entity_type="customer",
+        entity_id=customer.id,
+        action="customer_created",
+        old_value=None,
+        new_value={"email": customer.email, "name": customer.name, "company_name": customer.company_name},
+        performed_by="system",
+        customer_id=customer.id
     )
     db.add(audit)
     db.commit()

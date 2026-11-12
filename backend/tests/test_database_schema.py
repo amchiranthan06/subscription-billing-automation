@@ -58,5 +58,78 @@ class TestDatabaseSchemaDesign(unittest.TestCase):
         for field in required_fields:
             self.assertIn(field, columns, f"Column '{field}' is missing from 'customers' table")
 
+    def test_subscription_table_fields(self):
+        columns = {col["name"] for col in self.inspector.get_columns("subscriptions")}
+        required_fields = {
+            "customer_id",
+            "plan_id",
+            "status",
+            "start_date",
+            "end_date",
+            "created_at",
+            "updated_at"
+        }
+        for field in required_fields:
+            self.assertIn(field, columns, f"Column '{field}' is missing from 'subscriptions' table")
+
+    def test_billing_cycles_table_fields(self):
+        columns = {col["name"] for col in self.inspector.get_columns("billing_cycles")}
+        required_fields = {
+            "subscription_id",
+            "cycle_start_date",
+            "cycle_end_date",
+            "renewal_date",
+            "status",
+            "created_at",
+            "updated_at"
+        }
+        for field in required_fields:
+            self.assertIn(field, columns, f"Column '{field}' is missing from 'billing_cycles' table")
+
+    def test_invoice_table_fields(self):
+        columns = {col["name"] for col in self.inspector.get_columns("invoices")}
+        required_fields = {
+            "invoice_number",
+            "subscription_id",
+            "customer_id",
+            "invoice_date",
+            "due_date",
+            "subtotal",
+            "tax_amount",
+            "total_amount",
+            "status"
+        }
+        for field in required_fields:
+            self.assertIn(field, columns, f"Column '{field}' is missing from 'invoices' table")
+
+    def test_payment_table_fields(self):
+        columns = {col["name"] for col in self.inspector.get_columns("payments")}
+        required_fields = {
+            "invoice_id",
+            "payment_reference",
+            "amount",
+            "payment_method",
+            "status",
+            "payment_date",
+            "created_at",
+            "updated_at"
+        }
+        for field in required_fields:
+            self.assertIn(field, columns, f"Column '{field}' is missing from 'payments' table")
+
+    def test_audit_logs_table_fields(self):
+        columns = {col["name"] for col in self.inspector.get_columns("audit_logs")}
+        required_fields = {
+            "entity_type",
+            "entity_id",
+            "action",
+            "old_value",
+            "new_value",
+            "performed_by",
+            "created_at"
+        }
+        for field in required_fields:
+            self.assertIn(field, columns, f"Column '{field}' is missing from 'audit_logs' table")
+
 if __name__ == "__main__":
     unittest.main()

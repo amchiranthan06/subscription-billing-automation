@@ -76,15 +76,31 @@ class SubscriptionResponse(BaseModel):
     customer_id: str
     plan_id: str
     status: SubscriptionStatus
-    current_period_start: datetime
-    current_period_end: datetime
+    start_date: datetime
+    end_date: datetime
     trial_start: Optional[datetime] = None
     trial_end: Optional[datetime] = None
-    cancel_at_period_end: bool
+    cancel_at_period_end: bool = False
     cancelled_at: Optional[datetime] = None
     paused_at: Optional[datetime] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     plan: Optional[PlanResponse] = None
+
+    class Config:
+        from_attributes = True
+
+# ----------------- BILLING CYCLE SCHEMAS -----------------
+class BillingCycleResponse(BaseModel):
+    id: str
+    subscription_id: str
+    cycle_start_date: datetime
+    cycle_end_date: datetime
+    renewal_date: datetime
+    status: str
+    cycle_index: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -103,18 +119,35 @@ class InvoiceLineItemResponse(BaseModel):
 class InvoiceResponse(BaseModel):
     id: str
     invoice_number: str
+    subscription_id: Optional[str] = None
     customer_id: str
-    subscription_id: Optional[str]
+    invoice_date: datetime
+    due_date: datetime
     subtotal: Decimal
     tax_amount: Decimal
     total_amount: Decimal
-    currency: str
     status: InvoiceStatus
-    due_date: datetime
+    currency: str = "USD"
     paid_at: Optional[datetime] = None
     pdf_path: Optional[str] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     line_items: list[InvoiceLineItemResponse] = []
+
+    class Config:
+        from_attributes = True
+
+# ----------------- PAYMENT SCHEMAS -----------------
+class PaymentResponse(BaseModel):
+    id: str
+    invoice_id: str
+    payment_reference: Optional[str] = None
+    amount: Decimal
+    payment_method: str
+    status: PaymentStatus
+    payment_date: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -122,13 +155,12 @@ class InvoiceResponse(BaseModel):
 # ----------------- AUDIT LOG SCHEMAS -----------------
 class AuditLogResponse(BaseModel):
     id: str
-    customer_id: Optional[str]
-    subscription_id: Optional[str]
-    event_type: str
-    old_state: Optional[dict[str, Any]]
-    new_state: Optional[dict[str, Any]]
-    actor: str
-    description: Optional[str]
+    entity_type: str
+    entity_id: str
+    action: str
+    old_value: Optional[dict[str, Any]] = None
+    new_value: Optional[dict[str, Any]] = None
+    performed_by: str
     created_at: datetime
 
     class Config:

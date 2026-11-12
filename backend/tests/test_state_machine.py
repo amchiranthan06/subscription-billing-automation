@@ -35,8 +35,8 @@ class TestSubscriptionStateMachine(unittest.TestCase):
             customer_id=customer.id,
             plan_id=plan.id,
             status=SubscriptionStatus.TRIAL,
-            current_period_start=now,
-            current_period_end=now
+            start_date=now,
+            end_date=now
         )
         self.db.add(sub)
         self.db.commit()
@@ -70,8 +70,8 @@ class TestSubscriptionStateMachine(unittest.TestCase):
             customer_id=customer.id,
             plan_id=plan.id,
             status=SubscriptionStatus.CANCELLED,
-            current_period_start=now,
-            current_period_end=now,
+            start_date=now,
+            end_date=now,
             cancelled_at=now
         )
         self.db.add(sub)

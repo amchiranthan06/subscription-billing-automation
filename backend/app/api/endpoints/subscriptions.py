@@ -47,8 +47,8 @@ def create_subscription(sub_in: SubscriptionCreate, db: Session = Depends(get_db
         customer_id=customer.id,
         plan_id=plan.id,
         status=initial_status,
-        current_period_start=period_start,
-        current_period_end=period_end,
+        start_date=period_start,
+        end_date=period_end,
         trial_start=trial_start,
         trial_end=trial_end,
         cancel_at_period_end=False
@@ -61,20 +61,22 @@ def create_subscription(sub_in: SubscriptionCreate, db: Session = Depends(get_db
     cycle = BillingCycle(
         subscription_id=subscription.id,
         cycle_index=1,
-        start_date=period_start,
-        end_date=period_end,
-        due_date=period_end if initial_status == SubscriptionStatus.TRIAL else period_start,
-        status="scheduled"
+        cycle_start_date=period_start,
+        cycle_end_date=period_end,
+        renewal_date=period_end if initial_status == SubscriptionStatus.TRIAL else period_start,
+        status=BillingCycleStatus.PENDING
     )
     db.add(cycle)
 
     audit = AuditLog(
+        entity_type="subscription",
+        entity_id=subscription.id,
+        action="subscription_created",
+        old_value=None,
+        new_value={"status": subscription.status.value, "plan": plan.name},
+        performed_by="customer",
         customer_id=customer.id,
-        subscription_id=subscription.id,
-        event_type="subscription.created",
-        new_state={"status": subscription.status.value, "plan": plan.code},
-        actor="customer",
-        description=f"Subscription created on plan '{plan.name}' with status '{subscription.status.value}'."
+        subscription_id=subscription.id
     )
     db.add(audit)
     db.commit()

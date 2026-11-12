@@ -32,10 +32,12 @@ def create_plan(plan_in: PlanCreate, db: Session = Depends(get_db)):
     db.refresh(plan)
 
     audit = AuditLog(
-        event_type="plan.created",
-        new_state={"code": plan.code, "price": str(plan.price)},
-        actor="admin",
-        description=f"Plan '{plan.name}' created with price {plan.price} {plan.currency}"
+        entity_type="plan",
+        entity_id=plan.id,
+        action="plan_created",
+        old_value=None,
+        new_value={"code": plan.code, "price": str(plan.price), "name": plan.name},
+        performed_by="admin"
     )
     db.add(audit)
     db.commit()
@@ -68,11 +70,12 @@ def update_plan(plan_id: str, plan_update: PlanUpdate, db: Session = Depends(get
         setattr(plan, field, value)
 
     audit = AuditLog(
-        event_type="plan.updated",
-        old_state={"price": old_price},
-        new_state={"price": str(plan.price), "is_active": plan.is_active},
-        actor="admin",
-        description=f"Plan '{plan.name}' updated."
+        entity_type="plan",
+        entity_id=plan.id,
+        action="plan_updated",
+        old_value={"price": old_price},
+        new_value={"price": str(plan.price), "is_active": plan.is_active},
+        performed_by="admin"
     )
     db.add(audit)
     db.commit()
@@ -87,9 +90,12 @@ def archive_plan(plan_id: str, db: Session = Depends(get_db)):
     
     plan.is_active = False
     audit = AuditLog(
-        event_type="plan.archived",
-        actor="admin",
-        description=f"Plan '{plan.name}' was archived."
+        entity_type="plan",
+        entity_id=plan.id,
+        action="plan_archived",
+        old_value={"is_active": True},
+        new_value={"is_active": False},
+        performed_by="admin"
     )
     db.add(audit)
     db.commit()
