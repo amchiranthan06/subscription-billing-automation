@@ -17,6 +17,18 @@ def generate_uuid():
 def utc_now():
     return datetime.now(timezone.utc)
 
+# ----------------- 0. USERS MODEL (TASK 3) -----------------
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    name = Column(String(100), nullable=False)
+    email = Column(String(150), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(50), default="user", nullable=False) # admin, user
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
 # ----------------- 1. PLANS MODEL -----------------
 class Plan(Base):
     __tablename__ = "plans"

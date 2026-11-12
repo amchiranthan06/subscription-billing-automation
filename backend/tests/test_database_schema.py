@@ -21,6 +21,7 @@ class TestDatabaseSchemaDesign(unittest.TestCase):
     def test_all_seven_tables_exist(self):
         tables = set(self.inspector.get_table_names())
         required_tables = {
+            "users",
             "plans",
             "customers",
             "subscriptions",
@@ -31,6 +32,19 @@ class TestDatabaseSchemaDesign(unittest.TestCase):
         }
         for table in required_tables:
             self.assertIn(table, tables, f"Table '{table}' is missing from schema")
+
+    def test_users_table_fields(self):
+        columns = {col["name"] for col in self.inspector.get_columns("users")}
+        required_fields = {
+            "name",
+            "email",
+            "hashed_password",
+            "role",
+            "created_at",
+            "updated_at"
+        }
+        for field in required_fields:
+            self.assertIn(field, columns, f"Column '{field}' is missing from 'users' table")
 
     def test_plan_table_fields(self):
         columns = {col["name"] for col in self.inspector.get_columns("plans")}

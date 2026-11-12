@@ -4,11 +4,12 @@ from app.models.enums import (
     CancellationTiming, LineItemType
 )
 from app.models.models import (
-    Customer, Plan, Subscription, BillingCycle,
+    User, Customer, Plan, Subscription, BillingCycle,
     Invoice, InvoiceLineItem, Payment, AuditLog
 )
 
 __all__ = [
+    "User",
     "SubscriptionStatus",
     "BillingInterval",
     "BillingCycleStatus",

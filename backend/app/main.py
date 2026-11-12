@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine, check_db_connection
 from app.api.api_v1 import api_router
+from app.api.endpoints import pages
 import logging
 
 # Configure logger
@@ -75,6 +76,9 @@ def startup_event():
 
 # Mount API routers under /api/v1
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Mount Auth UI Pages (Task 3: Signup, Signin, Home)
+app.include_router(pages.router)
 
 @app.get("/", include_in_schema=False)
 def root():

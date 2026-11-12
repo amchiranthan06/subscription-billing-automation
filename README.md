@@ -39,6 +39,24 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Task 3: User Authentication ✅
+* **Objective**: Create signup, signin, home pages using JWT authentication.
+* **Requirements Completed**:
+  - **User Model (`users`)**: Fields for `id`, `name`, `email`, `hashed_password`, `role`, `created_at`, `updated_at`.
+  - **Password Security**: Implemented secure password hashing and verification using `bcrypt`.
+  - **JWT Authentication**: Implemented `HS256` JWT token generation and validation with 24-hour expiration (`app/core/security.py`).
+  - **Auth API Endpoints**:
+    - `POST /api/v1/auth/signup`: Registers a user, hashes password, and returns a signed JWT token.
+    - `POST /api/v1/auth/signin`: Validates credentials and returns a signed JWT token.
+    - `GET /api/v1/auth/me`: Protected endpoint requiring `Bearer <token>` to access user profile.
+  - **Interactive UI Pages**:
+    - **Sign Up Page**: `http://127.0.0.1:8000/auth/signup`
+    - **Sign In Page**: `http://127.0.0.1:8000/auth/signin`
+    - **Protected Home Page**: `http://127.0.0.1:8000/auth/home` (validates JWT from browser `localStorage` and loads user profile).
+* **Deliverable**: Complete JWT authentication lifecycle working across backend APIs, database persistence, and browser UI pages.
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -66,12 +84,11 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 Open **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)** to test the interactive Swagger documentation.
 
-### 2. Run Database Schema Verification Tests
+### 2. Run Verification Tests
 ```bash
+# Run Database Schema Tests (9 tests)
 python backend/tests/test_database_schema.py
+
+# Run JWT Authentication Tests (3 tests)
+python backend/tests/test_auth.py
 ```
-Outputs:
-```text
-Ran 8 tests in 0.060s - OK
-```
-*(Confirms all 7 tables and all required fields exist in the schema).*

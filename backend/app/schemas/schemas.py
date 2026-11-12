@@ -7,6 +7,31 @@ from app.models.enums import (
     PaymentStatus, CancellationTiming, LineItemType
 )
 
+# ----------------- 0. USER / AUTH SCHEMAS (TASK 3) -----------------
+class UserSignup(BaseModel):
+    name: str = Field(..., example="John Doe")
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", example="john@example.com")
+    password: str = Field(..., min_length=6, example="SecretPassword123!")
+
+class UserSignin(BaseModel):
+    email: str = Field(..., example="john@example.com")
+    password: str = Field(..., example="SecretPassword123!")
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
 # ----------------- CUSTOMER SCHEMAS -----------------
 class CustomerBase(BaseModel):
     name: str = Field(..., example="Acme Corp")
