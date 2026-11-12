@@ -1,6 +1,6 @@
 from app.schemas.schemas import (
     UserSignup, UserSignin, UserResponse, TokenResponse,
-    CustomerCreate, CustomerResponse,
+    CustomerCreate, CustomerUpdate, CustomerResponse,
     PlanCreate, PlanUpdate, PlanResponse,
     SubscriptionCreate, SubscriptionChangePlan, SubscriptionCancel, SubscriptionStatusTransition, SubscriptionResponse,
     InvoiceLineItemResponse, InvoiceResponse,

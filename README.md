@@ -89,6 +89,17 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Task 6: Customer Management APIs ✅
+* **Objective**: Manage SaaS customers.
+* **APIs Implemented**:
+  - **Create Customer**: `POST /api/v1/customers` (registers customer with `name`, `email`, and `company_name`)
+  - **List Customers**: `GET /api/v1/customers` (retrieves all registered customer accounts)
+  - **Get Customer**: `GET /api/v1/customers/{id}` (fetches single customer profile)
+  - **Update Customer**: `PUT /api/v1/customers/{id}` (updates profile details with email uniqueness validation and audit logging)
+* **Deliverable**: Complete customer management lifecycle verified via 3 automated unit tests and interactive Swagger UI.
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -130,6 +141,9 @@ python backend/tests/test_state_machine.py
 # Run Plan Management API Tests (4 tests)
 python backend/tests/test_plans_api.py
 
-# Or run all 25 tests together:
+# Run Customer Management API Tests (3 tests)
+python backend/tests/test_customers_api.py
+
+# Or run all 28 tests together:
 python -m unittest discover backend/tests
 ```

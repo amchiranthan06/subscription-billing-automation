@@ -43,10 +43,19 @@ class CustomerBase(BaseModel):
 class CustomerCreate(CustomerBase):
     payment_method_id: Optional[str] = "pm_mock_card_valid"
 
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = Field(default=None, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    company_name: Optional[str] = None
+    country: Optional[str] = None
+    currency: Optional[str] = None
+    payment_method_id: Optional[str] = None
+
 class CustomerResponse(CustomerBase):
     id: str
     payment_method_id: Optional[str]
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
