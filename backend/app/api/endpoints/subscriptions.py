@@ -4,9 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.models import Customer, Plan, Subscription, BillingCycle, AuditLog
-from app.models.enums import SubscriptionStatus, BillingInterval, CancellationTiming
+from app.models.enums import (
+    SubscriptionStatus, BillingInterval, BillingCycleStatus, CancellationTiming
+)
 from app.schemas.schemas import (
-    SubscriptionCreate, SubscriptionResponse, SubscriptionCancel, SubscriptionStatusTransition
+    SubscriptionCreate, SubscriptionResponse, SubscriptionCancel, SubscriptionStatusTransition,
+    SubscriptionChangePlan
 )
 from app.services.state_machine import transition_subscription, InvalidStateTransitionError
 
@@ -104,6 +107,58 @@ def get_subscription(subscription_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     return sub
 
+@router.post("/{subscription_id}/change-plan", response_model=SubscriptionResponse)
+def change_subscription_plan(
+    subscription_id: str,
+    plan_in: SubscriptionChangePlan,
+    db: Session = Depends(get_db)
+):
+    """
+    Task 8: Upgrade or downgrade a subscription to a new active plan.
+    - Validates target plan exists and is active.
+    - Prevents changing to the same plan or changing cancelled subscriptions.
+    - Records audit log with old and new plan details.
+    """
+    sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+
+    if sub.status == SubscriptionStatus.CANCELLED:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot change plan of a cancelled subscription")
+
+    new_plan = db.query(Plan).filter(Plan.id == plan_in.new_plan_id).first()
+    if not new_plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target plan not found")
+
+    if not new_plan.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot switch to an inactive or archived plan")
+
+    if new_plan.id == sub.plan_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subscription is already on this plan")
+
+    old_plan = db.query(Plan).filter(Plan.id == sub.plan_id).first()
+    old_plan_name = old_plan.name if old_plan else "Unknown"
+    old_plan_id = sub.plan_id
+
+    sub.plan_id = new_plan.id
+    now = datetime.now(timezone.utc)
+    sub.updated_at = now
+
+    audit = AuditLog(
+        entity_type="subscription",
+        entity_id=sub.id,
+        action="subscription_plan_changed",
+        old_value={"plan_id": old_plan_id, "plan_name": old_plan_name},
+        new_value={"plan_id": new_plan.id, "plan_name": new_plan.name, "prorate": plan_in.prorate},
+        performed_by="customer",
+        customer_id=sub.customer_id,
+        subscription_id=sub.id
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(sub)
+    return sub
+
 @router.post("/{subscription_id}/pause", response_model=SubscriptionResponse)
 def pause_subscription(subscription_id: str, db: Session = Depends(get_db)):
     sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
@@ -153,11 +208,14 @@ def cancel_subscription(
     if cancel_in.timing == CancellationTiming.END_OF_CYCLE:
         sub.cancel_at_period_end = True
         audit = AuditLog(
+            entity_type="subscription",
+            entity_id=sub.id,
+            action="subscription_scheduled_cancellation",
+            old_value={"cancel_at_period_end": False},
+            new_value={"cancel_at_period_end": True, "end_date": sub.end_date.isoformat()},
+            performed_by="customer",
             customer_id=sub.customer_id,
-            subscription_id=sub.id,
-            event_type="subscription.scheduled_cancellation",
-            actor="customer",
-            description=f"Subscription scheduled to cancel at end of period ({sub.current_period_end}). Reason: {cancel_in.reason}"
+            subscription_id=sub.id
         )
         db.add(audit)
         db.commit()

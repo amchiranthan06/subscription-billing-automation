@@ -100,19 +100,54 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Task 7: Subscription Creation API ✅
+* **Objective**: Create customer subscriptions with plan/customer validation, trial logic, and billing cycle initialization.
+* **Requirements Completed**:
+  - **Customer & Plan Validation**: Verifies customer exists (HTTP 404) and plan exists and is active (HTTP 400).
+  - **Trial Period Calculation**: Automatically sets status to `trial` when `start_with_trial=True`, computing `trial_start` and `trial_end` based on plan or custom trial days. Otherwise sets status directly to `active`.
+  - **Billing Cycle Initialization**: Automatically generates the first `BillingCycle` entry in `pending` status with synchronized cycle start and end dates.
+  - **Audit Logging**: Logs the subscription creation event in `AuditLog` with customer ID, plan name, and initial status.
+  - **API Endpoint**: `POST /api/v1/subscriptions`
+* **Deliverable**: Fully validated subscription creation engine verified via 4 automated unit tests and interactive Swagger UI.
+
+---
+
+### Task 8: Subscription Operations APIs ✅
+* **Objective**: Provide lifecycle management operations for active customer subscriptions.
+* **APIs Implemented**:
+  - **Change Plan**: `POST /api/v1/subscriptions/{id}/change-plan` (switches active subscriptions to upgraded/downgraded active plans with audit tracking; rejects inactive plans or duplicate plans).
+  - **Pause Subscription**: `POST /api/v1/subscriptions/{id}/pause` (transitions active subscription to `paused` state and records `paused_at` timestamp).
+  - **Resume Subscription**: `POST /api/v1/subscriptions/{id}/resume` (transitions paused subscription back to `active` state and clears pause status).
+  - **Cancel Subscription**: `POST /api/v1/subscriptions/{id}/cancel` (supports both `immediate` cancellation marking `cancelled_at`, and `end_of_cycle` scheduling setting `cancel_at_period_end=True`).
+* **Deliverable**: Complete subscription lifecycle operations verified via 5 automated unit tests and interactive Swagger UI.
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
 backend/
 ├── app/
-│   ├── api/             # API route endpoints
-│   ├── core/            # Configuration (.env) & Database engine (PostgreSQL/SQLAlchemy)
-│   ├── models/          # 7 Core ORM models (Plans, Customers, Subscriptions, etc.)
-│   ├── schemas/         # Pydantic validation schemas
-│   └── main.py          # FastAPI application entrypoint
+│   ├── api/
+│   │   ├── endpoints/
+│   │   │   ├── auth.py                  # JWT Auth & User endpoints
+│   │   │   ├── customers.py             # Customer CRUD endpoints (Task 6)
+│   │   │   ├── pages.py                 # Interactive HTML pages (Signup, Signin, Home)
+│   │   │   ├── plans.py                 # Plan CRUD endpoints (Task 5)
+│   │   │   └── subscriptions.py         # Subscription Creation & Operations (Tasks 4, 7, 8)
+│   ├── core/                            # Configuration (.env) & Database engine (PostgreSQL/SQLAlchemy)
+│   ├── models/                          # 7 Core ORM models (Plans, Customers, Subscriptions, etc.)
+│   ├── schemas/                         # Pydantic validation schemas
+│   ├── services/                        # State Machine & transition logic
+│   └── main.py                          # FastAPI application entrypoint
 ├── tests/
-│   ├── test_database_schema.py    # Task 2 schema validation tests
-│   └── test_state_machine.py      # State transition unit tests
+│   ├── test_auth.py                     # Task 3 JWT Auth tests (3 tests)
+│   ├── test_customers_api.py            # Task 6 Customer API tests (3 tests)
+│   ├── test_database_schema.py          # Task 2 Schema inspection tests (9 tests)
+│   ├── test_plans_api.py                # Task 5 Plan API tests (4 tests)
+│   ├── test_state_machine.py            # Task 4 State transition tests (9 tests)
+│   ├── test_subscription_creation_api.py# Task 7 Subscription creation tests (4 tests)
+│   └── test_subscription_operations_api.py # Task 8 Subscription operations tests (5 tests)
 └── requirements.txt
 ```
 
@@ -144,6 +179,12 @@ python backend/tests/test_plans_api.py
 # Run Customer Management API Tests (3 tests)
 python backend/tests/test_customers_api.py
 
-# Or run all 28 tests together:
+# Run Subscription Creation API Tests (4 tests)
+python backend/tests/test_subscription_creation_api.py
+
+# Run Subscription Operations API Tests (5 tests)
+python backend/tests/test_subscription_operations_api.py
+
+# Or run all 37 tests together:
 python -m unittest discover backend/tests
 ```
