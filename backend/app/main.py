@@ -61,17 +61,16 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
-    """Verify PostgreSQL connectivity on startup and initialize schema if connected."""
+    """Verify database connectivity on startup and initialize schema."""
     logger.info("Initializing BillFlow backend application...")
     db_check = check_db_connection()
     if db_check["status"] == "connected":
-        logger.info("Successfully connected to PostgreSQL! Creating database tables...")
+        logger.info(f"Successfully connected to {db_check['database']}! Creating database tables...")
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables initialized successfully.")
     else:
         logger.warning(
-            f"Could not connect to PostgreSQL on startup: {db_check.get('error')}. "
-            "Please verify that your PostgreSQL service is running and credentials in .env are correct."
+            f"Could not connect to database on startup: {db_check.get('error')}."
         )
 
 # Mount API routers under /api/v1
