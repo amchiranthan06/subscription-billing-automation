@@ -147,7 +147,7 @@ def change_subscription_plan(
     audit = AuditLog(
         entity_type="subscription",
         entity_id=sub.id,
-        action="subscription_plan_changed",
+        action="plan_changed",
         old_value={"plan_id": old_plan_id, "plan_name": old_plan_name},
         new_value={"plan_id": new_plan.id, "plan_name": new_plan.name, "prorate": plan_in.prorate},
         performed_by="customer",
@@ -210,9 +210,9 @@ def cancel_subscription(
         audit = AuditLog(
             entity_type="subscription",
             entity_id=sub.id,
-            action="subscription_scheduled_cancellation",
-            old_value={"cancel_at_period_end": False},
-            new_value={"cancel_at_period_end": True, "end_date": sub.end_date.isoformat()},
+            action="subscription_cancelled",
+            old_value={"cancel_at_period_end": False, "status": sub.status.value},
+            new_value={"cancel_at_period_end": True, "timing": "end_of_cycle", "end_date": sub.end_date.isoformat(), "reason": cancel_in.reason},
             performed_by="customer",
             customer_id=sub.customer_id,
             subscription_id=sub.id

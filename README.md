@@ -123,6 +123,34 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Task 9: Billing Cycle Engine ✅
+* **Objective**: Generate billing cycle records and maintain renewal schedules.
+* **Requirements Completed**:
+  - **Monthly Renewal Calculation**: Accurately computes `renewal_date` exactly 1 month forward, accounting for month-end calendar boundaries (e.g. Jan 31 -> Feb 28).
+  - **Annual Renewal Calculation**: Accurately computes `renewal_date` exactly 1 year forward with leap-year handling.
+  - **Store Billing Cycle History**: Generates sequential billing cycle records (`cycle_index`), auto-completing preceding cycles (`status=completed`) and setting the active cycle to `status=pending`.
+  - **API Endpoints**:
+    - `POST /api/v1/billing-cycles/generate/{subscription_id}`: Generates next billing cycle.
+    - `GET /api/v1/billing-cycles/subscription/{subscription_id}`: Retrieves full historical billing cycle records.
+* **Deliverable**: Robust Billing Cycle Calculation Service (`app/services/billing_cycle.py`) verified via 4 automated unit tests.
+
+---
+
+### Task 10: Audit Logging Engine ✅
+* **Objective**: Track every important billing action with an immutable audit trail.
+* **Requirements Completed (All 6 Log Events)**:
+  1. **Plan created**: Automatically logs `action="plan_created"` with new pricing and tier configurations.
+  2. **Plan updated**: Automatically logs `action="plan_updated"` capturing previous and updated plan values.
+  3. **Customer created**: Automatically logs `action="customer_created"` with customer email and details.
+  4. **Subscription created**: Automatically logs `action="subscription_created"` with initial plan and status.
+  5. **Plan changed**: Automatically logs `action="plan_changed"` with previous plan, new plan, and proration flag.
+  6. **Subscription cancelled**: Automatically logs `action="subscription_cancelled"` with immediate or end-of-cycle cancellation parameters.
+* **API Endpoints**:
+  - `GET /api/v1/audit-logs`: Retrieves immutable audit entries with filtering by `action`, `entity_type`, `customer_id`, and `subscription_id`.
+* **Deliverable**: Automated Audit Logging Service (`app/services/audit.py`) verified via 6 automated unit tests.
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -130,7 +158,9 @@ backend/
 ├── app/
 │   ├── api/
 │   │   ├── endpoints/
+│   │   │   ├── audit_logs.py            # Task 10 Audit log query endpoints
 │   │   │   ├── auth.py                  # JWT Auth & User endpoints
+│   │   │   ├── billing_cycles.py        # Task 9 Billing cycle endpoints
 │   │   │   ├── customers.py             # Customer CRUD endpoints (Task 6)
 │   │   │   ├── pages.py                 # Interactive HTML pages (Signup, Signin, Home)
 │   │   │   ├── plans.py                 # Plan CRUD endpoints (Task 5)
@@ -138,10 +168,15 @@ backend/
 │   ├── core/                            # Configuration (.env) & Database engine (PostgreSQL/SQLAlchemy)
 │   ├── models/                          # 7 Core ORM models (Plans, Customers, Subscriptions, etc.)
 │   ├── schemas/                         # Pydantic validation schemas
-│   ├── services/                        # State Machine & transition logic
+│   ├── services/
+│   │   ├── audit.py                     # Task 10 Centralized audit logging service
+│   │   ├── billing_cycle.py             # Task 9 Billing cycle calculation service
+│   │   └── state_machine.py             # Task 4 State Machine & transition logic
 │   └── main.py                          # FastAPI application entrypoint
 ├── tests/
+│   ├── test_audit_logging.py            # Task 10 Audit logging tests (6 tests)
 │   ├── test_auth.py                     # Task 3 JWT Auth tests (3 tests)
+│   ├── test_billing_cycle_engine.py     # Task 9 Billing cycle engine tests (4 tests)
 │   ├── test_customers_api.py            # Task 6 Customer API tests (3 tests)
 │   ├── test_database_schema.py          # Task 2 Schema inspection tests (9 tests)
 │   ├── test_plans_api.py                # Task 5 Plan API tests (4 tests)
@@ -185,6 +220,12 @@ python backend/tests/test_subscription_creation_api.py
 # Run Subscription Operations API Tests (5 tests)
 python backend/tests/test_subscription_operations_api.py
 
-# Or run all 37 tests together:
+# Run Billing Cycle Engine Tests (4 tests)
+python backend/tests/test_billing_cycle_engine.py
+
+# Run Audit Logging Tests (6 tests)
+python backend/tests/test_audit_logging.py
+
+# Or run all 47 tests together:
 python -m unittest discover backend/tests
 ```

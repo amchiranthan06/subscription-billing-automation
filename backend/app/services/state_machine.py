@@ -77,11 +77,17 @@ def transition_subscription(
     elif target_status == SubscriptionStatus.ACTIVE and old_status == SubscriptionStatus.PAUSED:
         subscription.paused_at = None
 
+    # Determine action name (Task 10: subscription_cancelled)
+    if target_status == SubscriptionStatus.CANCELLED:
+        action_name = "subscription_cancelled"
+    else:
+        action_name = f"state_transition_from_{old_status.value}_to_{target_status.value}"
+
     # Record immutable audit log entry
     audit_entry = AuditLog(
         entity_type="subscription",
         entity_id=subscription.id,
-        action=f"state_transition_from_{old_status.value}_to_{target_status.value}",
+        action=action_name,
         old_value={"status": old_status.value},
         new_value={
             "status": target_status.value,

@@ -94,7 +94,7 @@ class TestSubscriptionOperationsAPI(unittest.TestCase):
         audit = self.db.query(AuditLog).filter(
             AuditLog.entity_type == "subscription",
             AuditLog.entity_id == self.subscription.id,
-            AuditLog.action == "subscription_plan_changed"
+            AuditLog.action == "plan_changed"
         ).first()
         self.assertIsNotNone(audit)
         self.assertEqual(audit.old_value["plan_id"], self.basic_plan.id)
