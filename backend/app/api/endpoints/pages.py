@@ -548,7 +548,7 @@ def home_page():
                         return `<option value="${{s.id}}">Sub #${{s.id.substring(0,8)}} - ${{cust}} (${{plan}} - $${{price}})</option>`;
                     }}).join('');
                 }} catch (err) {{
-                    subSelect.innerHTML = `<option value="">Error: ${err.message}</option>`;
+                    subSelect.innerHTML = `<option value="">Error: ${{err.message}}</option>`;
                 }}
             }}
 
