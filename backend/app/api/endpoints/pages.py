@@ -541,11 +541,12 @@ def home_page():
                         return;
                     }}
 
-                    subSelect.innerHTML = subs.map(s => {
+                    subSelect.innerHTML = subs.map(s => {{
                         const cust = s.customer ? s.customer.name : s.customer_id.substring(0,8);
                         const plan = s.plan ? s.plan.name : 'Plan';
-                        return `<option value="${s.id}">Sub #${s.id.substring(0,8)} - ${cust} (${plan} - $${s.plan ? s.plan.price : '0'})</option>`;
-                    }).join('');
+                        const price = s.plan ? s.plan.price : '0';
+                        return `<option value="${{s.id}}">Sub #${{s.id.substring(0,8)}} - ${{cust}} (${{plan}} - $${{price}})</option>`;
+                    }}).join('');
                 }} catch (err) {{
                     subSelect.innerHTML = `<option value="">Error: ${err.message}</option>`;
                 }}
