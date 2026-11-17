@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, plans, customers, subscriptions, audit_logs, billing_cycles
+from app.api.endpoints import auth, plans, customers, subscriptions, audit_logs, billing_cycles, invoices
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -8,3 +8,4 @@ api_router.include_router(customers.router)
 api_router.include_router(subscriptions.router)
 api_router.include_router(billing_cycles.router)
 api_router.include_router(audit_logs.router)
+api_router.include_router(invoices.router)

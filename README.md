@@ -151,6 +151,34 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+## 🎯 Milestone 2: Billing Operations & Invoicing
+
+### Task 1: Invoice Generation ✅
+* **Objective**: Automatically generate itemized invoices for active subscriptions with calculations, filters, and PDF export.
+* **Requirements Completed**:
+  - **Unique Invoice Numbers**: Formatted sequential identifier `INV-YYYYMM-XXXX` with database uniqueness constraint.
+  - **Billing Cycle & Subscription Linkage**: Linked directly to `subscription_id`, `customer_id`, and `billing_cycle_id`.
+  - **Financial Calculations**: Accurately computes `subtotal`, configurable `tax` (default 10%), and `total_amount = subtotal + tax`.
+  - **Itemized Line Items**: Stores plan fee, billing interval, and line item metadata in `invoice_line_items`.
+  - **Status Lifecycle**: Initial status set to `unpaid` (supports `paid`, `unpaid`, `draft`, `void`).
+  - **Duplicate Prevention**: Prevents duplicate invoice creation for the same billing cycle.
+  - **Automated PDF Generation**: High-quality branded PDF invoices generated using `ReportLab` with dynamic download.
+  - **Interactive UI**:
+    - "Invoices" tab added to navigation sidebar.
+    - Search filter by invoice number, customer name, and email.
+    - Status filter (`paid`, `unpaid`, all).
+    - Date range filter (start date, end date).
+    - Invoice list and detail view modal with itemized line items.
+    - One-click PDF download button.
+  - **API Endpoints**:
+    - `POST /api/v1/invoices/generate`: Generates invoice for active subscription.
+    - `GET /api/v1/invoices`: Lists invoices with status, search, and date filters.
+    - `GET /api/v1/invoices/{id}`: Detailed invoice breakdown with line items.
+    - `GET /api/v1/invoices/{id}/pdf`: Downloads itemized PDF invoice.
+* **Deliverable**: Invoice Generation Service (`app/services/invoice.py`), REST APIs (`app/api/endpoints/invoices.py`), and 7 automated unit tests.
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -162,15 +190,17 @@ backend/
 │   │   │   ├── auth.py                  # JWT Auth & User endpoints
 │   │   │   ├── billing_cycles.py        # Task 9 Billing cycle endpoints
 │   │   │   ├── customers.py             # Customer CRUD endpoints (Task 6)
-│   │   │   ├── pages.py                 # Interactive HTML pages (Signup, Signin, Home)
+│   │   │   ├── invoices.py              # Milestone 2 Task 1 Invoice endpoints & PDF export
+│   │   │   ├── pages.py                 # Interactive HTML UI pages (Auth, Invoices, Profile)
 │   │   │   ├── plans.py                 # Plan CRUD endpoints (Task 5)
 │   │   │   └── subscriptions.py         # Subscription Creation & Operations (Tasks 4, 7, 8)
 │   ├── core/                            # Configuration (.env) & Database engine (PostgreSQL/SQLAlchemy)
-│   ├── models/                          # 7 Core ORM models (Plans, Customers, Subscriptions, etc.)
+│   ├── models/                          # 7 Core ORM models (Plans, Customers, Subscriptions, Invoices, etc.)
 │   ├── schemas/                         # Pydantic validation schemas
 │   ├── services/
 │   │   ├── audit.py                     # Task 10 Centralized audit logging service
 │   │   ├── billing_cycle.py             # Task 9 Billing cycle calculation service
+│   │   ├── invoice.py                   # Milestone 2 Task 1 Invoice generation & ReportLab PDF engine
 │   │   └── state_machine.py             # Task 4 State Machine & transition logic
 │   └── main.py                          # FastAPI application entrypoint
 ├── tests/
@@ -179,6 +209,7 @@ backend/
 │   ├── test_billing_cycle_engine.py     # Task 9 Billing cycle engine tests (4 tests)
 │   ├── test_customers_api.py            # Task 6 Customer API tests (3 tests)
 │   ├── test_database_schema.py          # Task 2 Schema inspection tests (9 tests)
+│   ├── test_invoice_generation.py       # Milestone 2 Task 1 Invoice tests (7 tests)
 │   ├── test_plans_api.py                # Task 5 Plan API tests (4 tests)
 │   ├── test_state_machine.py            # Task 4 State transition tests (9 tests)
 │   ├── test_subscription_creation_api.py# Task 7 Subscription creation tests (4 tests)
@@ -226,6 +257,9 @@ python backend/tests/test_billing_cycle_engine.py
 # Run Audit Logging Tests (6 tests)
 python backend/tests/test_audit_logging.py
 
-# Or run all 47 tests together:
+# Run Invoice Generation Tests (Milestone 2 Task 1 - 7 tests)
+python backend/tests/test_invoice_generation.py
+
+# Or run all 54 tests together:
 python -m unittest discover backend/tests
 ```

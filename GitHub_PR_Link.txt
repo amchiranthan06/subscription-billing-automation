@@ -1,0 +1,21 @@
+Milestone 1 Submission - amchiranthan
+
+GitHub Pull Request Link:
+https://github.com/Springboard-Internship-2026/Creation-of-Subscription-Billing-Automation-System-using-Recurring-Revenue-Model-NOV-2026/pull/1
+
+PR Title: feat: Milestone 1 complete - Tasks 1 to 10 by amchiranthan
+Branch: amchiranthan-submit -> main
+Files Changed: 47
+Tests: 47/47 passing
+
+Tasks Completed:
+Task 1: Project Setup (FastAPI + SQLAlchemy + PostgreSQL config)
+Task 2: Database Design (7 core billing models)
+Task 3: User Authentication (JWT + bcrypt + UI pages)
+Task 4: Subscription State Machine
+Task 5: Plan Management APIs
+Task 6: Customer Management APIs
+Task 7: Subscription Creation API
+Task 8: Subscription Operations (change-plan, pause, resume, cancel)
+Task 9: Billing Cycle Engine (monthly and annual renewal)
+Task 10: Audit Logging (6 events auto-logged)

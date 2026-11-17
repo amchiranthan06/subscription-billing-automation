@@ -146,6 +146,11 @@ class BillingCycleResponse(BaseModel):
         from_attributes = True
 
 # ----------------- INVOICE & LINE ITEM SCHEMAS -----------------
+class InvoiceGenerateRequest(BaseModel):
+    subscription_id: str
+    billing_cycle_id: Optional[str] = None
+    tax_rate: Optional[Decimal] = Field(default=Decimal("0.10"), ge=0, le=1)
+
 class InvoiceLineItemResponse(BaseModel):
     id: str
     description: str
@@ -161,6 +166,9 @@ class InvoiceResponse(BaseModel):
     invoice_number: str
     subscription_id: Optional[str] = None
     customer_id: str
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    plan_name: Optional[str] = None
     invoice_date: datetime
     due_date: datetime
     subtotal: Decimal
