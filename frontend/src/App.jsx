@@ -4,7 +4,7 @@ const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('signin'); // 'signin' | 'signup'
-  const [navSection, setNavSection] = useState('invoices'); // 'profile' | 'invoices'
+  const [navSection, setNavSection] = useState('subscriptions'); // 'subscriptions' | 'invoices' | 'profile'
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -15,7 +15,7 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Invoice States
+  // Invoice States (Task 1)
   const [invoices, setInvoices] = useState([]);
   const [invLoading, setInvLoading] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
@@ -26,11 +26,23 @@ export default function App() {
 
   // Generate Invoice Modal
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [subscriptions, setSubscriptions] = useState([]);
   const [selectedSubId, setSelectedSubId] = useState('');
   const [taxRate, setTaxRate] = useState('0.10');
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState('');
+
+  // Subscriptions & Proration States (Task 2)
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [plans, setPlans] = useState([]);
+  const [subsLoading, setSubsLoading] = useState(false);
+  const [isPlanChangeModalOpen, setIsPlanChangeModalOpen] = useState(false);
+  const [selectedSubForChange, setSelectedSubForChange] = useState(null);
+  const [targetPlanId, setTargetPlanId] = useState('');
+  const [prorationPreview, setProrationPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [planChangeError, setPlanChangeError] = useState('');
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [planHistory, setPlanHistory] = useState([]);
 
   // Check for saved token on load
   useEffect(() => {
@@ -40,20 +52,22 @@ export default function App() {
     }
   }, []);
 
-  // Fetch invoices when authenticated
+  // Fetch data when authenticated
   useEffect(() => {
     if (user) {
-      fetchInvoices();
+      if (navSection === 'invoices') {
+        fetchInvoices();
+      } else if (navSection === 'subscriptions') {
+        fetchSubscriptionsAndPlans();
+      }
     }
-  }, [user, searchFilter, statusFilter, startDateFilter, endDateFilter]);
+  }, [user, navSection, searchFilter, statusFilter, startDateFilter, endDateFilter]);
 
   const fetchUserProfile = async (token) => {
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const userData = await res.json();
@@ -85,9 +99,7 @@ export default function App() {
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.detail || 'Sign in failed. Please check your credentials.');
-      }
+      if (!res.ok) throw new Error(data.detail || 'Sign in failed.');
 
       localStorage.setItem('billflow_token', data.access_token);
       setUser(data.user);
@@ -113,9 +125,7 @@ export default function App() {
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.detail || 'Registration failed.');
-      }
+      if (!res.ok) throw new Error(data.detail || 'Registration failed.');
 
       localStorage.setItem('billflow_token', data.access_token);
       setUser(data.user);
@@ -156,6 +166,95 @@ export default function App() {
       console.error('Failed to fetch invoices:', err);
     } finally {
       setInvLoading(false);
+    }
+  };
+
+  const fetchSubscriptionsAndPlans = async () => {
+    try {
+      setSubsLoading(true);
+      const [subsRes, plansRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/subscriptions`),
+        fetch(`${API_BASE_URL}/plans`)
+      ]);
+      if (subsRes.ok && plansRes.ok) {
+        const subsData = await subsRes.json();
+        const plansData = await plansRes.json();
+        setSubscriptions(subsData);
+        setPlans(plansData);
+        if (subsData.length > 0) {
+          fetchPlanHistory(subsData[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load subscriptions & plans:', err);
+    } finally {
+      setSubsLoading(false);
+    }
+  };
+
+  const fetchPlanHistory = async (subId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/subscriptions/${subId}/plan-history`);
+      if (res.ok) {
+        const historyData = await res.json();
+        setPlanHistory(historyData);
+      }
+    } catch (err) {
+      console.error('Failed to load plan history:', err);
+    }
+  };
+
+  const openPlanChangeModal = (sub) => {
+    setSelectedSubForChange(sub);
+    setTargetPlanId('');
+    setProrationPreview(null);
+    setPlanChangeError('');
+    setIsPlanChangeModalOpen(true);
+  };
+
+  const handleTargetPlanSelect = async (newPlanId) => {
+    setTargetPlanId(newPlanId);
+    setPlanChangeError('');
+    setProrationPreview(null);
+    setPreviewLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/subscriptions/${selectedSubForChange.id}/proration-preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_plan_id: newPlanId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to calculate proration preview');
+      setProrationPreview(data);
+    } catch (err) {
+      setPlanChangeError(err.message);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleConfirmPlanChange = async () => {
+    if (!selectedSubForChange || !targetPlanId) return;
+    setPlanChangeError('');
+    setConfirmLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/subscriptions/${selectedSubForChange.id}/change-plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_plan_id: targetPlanId, prorate: true })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Plan upgrade failed');
+
+      setIsPlanChangeModalOpen(false);
+      await fetchSubscriptionsAndPlans();
+      fetchPlanHistory(selectedSubForChange.id);
+    } catch (err) {
+      setPlanChangeError(err.message);
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -214,7 +313,7 @@ export default function App() {
               BillFlow Subscription Billing Automation System
             </h1>
             <p className="text-[11px] text-slate-500 hidden sm:block">
-              Milestone 2: Recurring Revenue, Invoicing & Financial Operations
+              Milestone 2: Recurring Revenue, Invoicing & Prorated Plan Operations
             </p>
           </div>
         </div>
@@ -236,13 +335,24 @@ export default function App() {
 
       {/* 2. BODY CONTENT */}
       {user ? (
-        /* AUTHENTICATED DASHBOARD WITH SIDEBAR */
         <div className="flex flex-1">
           {/* SIDEBAR */}
-          <aside className="w-60 bg-white border-r border-slate-200 p-4 space-y-2 flex-shrink-0">
+          <aside className="w-64 bg-white border-r border-slate-200 p-4 space-y-2 flex-shrink-0">
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-3 py-1">
               Navigation
             </div>
+
+            <button
+              onClick={() => setNavSection('subscriptions')}
+              className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition text-left ${
+                navSection === 'subscriptions'
+                  ? 'text-indigo-600 bg-indigo-50'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <span className="text-base">🔁</span>
+              <span>Proration & Plans (M2-T2)</span>
+            </button>
 
             <button
               onClick={() => setNavSection('invoices')}
@@ -272,7 +382,7 @@ export default function App() {
               <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-xs text-indigo-900">
                 <div className="font-bold mb-1">Milestone 2 Active</div>
                 <div className="text-[11px] text-indigo-700">
-                  Task 1: Automated Invoice Generation, Subtotal/Tax calculation & PDF exports.
+                  Task 2: Mid-cycle Proration with Credit/Debit calculations and Audit trail.
                 </div>
               </div>
             </div>
@@ -280,10 +390,132 @@ export default function App() {
 
           {/* MAIN WORKSPACE */}
           <main className="flex-1 p-6 md:p-8 max-w-7xl overflow-y-auto">
-            {navSection === 'invoices' ? (
-              /* INVOICES SECTION */
+            {navSection === 'subscriptions' ? (
+              /* SUBSCRIPTIONS & PRORATION SECTION (Task 2) */
               <div className="space-y-6">
-                {/* Header & Generate Button */}
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Subscription & Proration Engine</h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Upgrade or downgrade subscription plans mid-cycle with mathematically fair credit and debit adjustments.
+                  </p>
+                </div>
+
+                {/* Subscriptions Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {subsLoading ? (
+                    <div className="col-span-2 p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                      Loading subscriptions...
+                    </div>
+                  ) : subscriptions.length === 0 ? (
+                    <div className="col-span-2 p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                      No subscriptions found.
+                    </div>
+                  ) : (
+                    subscriptions.map((s) => {
+                      const custName = s.customer ? s.customer.name : `Customer ${s.customer_id.substring(0, 6)}`;
+                      const planName = s.plan ? s.plan.name : 'Current Plan';
+                      const planPrice = s.plan ? parseFloat(s.plan.price).toFixed(2) : '0.00';
+                      const interval = s.plan ? s.plan.billing_interval : 'month';
+
+                      return (
+                        <div key={s.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                Sub #{s.id.substring(0, 8)}
+                              </span>
+                              <h3 className="font-bold text-slate-900 text-base mt-2">{custName}</h3>
+                              <p className="text-xs text-slate-500">
+                                Renewal: {new Date(s.end_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-mono font-extrabold text-slate-900">${planPrice}</div>
+                              <div className="text-[10px] text-slate-400 uppercase">per {interval}</div>
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-slate-50 rounded-xl flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-medium">Current Plan:</span>
+                            <span className="font-bold text-indigo-700">{planName}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-2">
+                            <button
+                              onClick={() => fetchPlanHistory(s.id)}
+                              className="text-xs text-slate-500 hover:text-slate-700 font-semibold underline"
+                            >
+                              View History
+                            </button>
+                            <button
+                              onClick={() => openPlanChangeModal(s)}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"
+                            >
+                              Upgrade / Change Plan
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Previous Plan Changes Timeline */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 className="font-bold text-slate-900 text-sm md:text-base flex items-center space-x-2">
+                      <span>📜</span>
+                      <span>Previous Plan Changes</span>
+                    </h3>
+                    <span className="text-xs text-slate-400">Audit-backed history</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {planHistory.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-3">
+                        No previous plan changes recorded for this subscription. Try upgrading a plan above!
+                      </p>
+                    ) : (
+                      planHistory.map((item, idx) => {
+                        const adj = parseFloat(item.net_adjustment || 0);
+                        const adjClass = adj >= 0 ? 'text-indigo-700 bg-indigo-50' : 'text-emerald-700 bg-emerald-50';
+
+                        return (
+                          <div
+                            key={idx}
+                            className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                              <div>
+                                <span className="font-bold text-slate-800">
+                                  {item.from_plan} → {item.to_plan}
+                                </span>
+                                <span className="text-slate-400 text-[11px] ml-2">
+                                  {item.date ? new Date(item.date).toLocaleDateString() : '-'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <span className={`font-mono font-bold px-2.5 py-1 rounded-lg ${adjClass}`}>
+                                Adjustment: ${adj.toFixed(2)}
+                              </span>
+                              {item.invoice_number && (
+                                <span className="text-[10px] font-mono text-slate-400">
+                                  ({item.invoice_number})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : navSection === 'invoices' ? (
+              /* INVOICES SECTION (Task 1) */
+              <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900">Invoices & Billing</h2>
@@ -303,9 +535,7 @@ export default function App() {
                 {/* Filter Bar */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-                      Search
-                    </label>
+                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Search</label>
                     <input
                       type="text"
                       value={searchFilter}
@@ -315,9 +545,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-                      Status
-                    </label>
+                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Status</label>
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
@@ -331,9 +559,7 @@ export default function App() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-                      Start Date
-                    </label>
+                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Start Date</label>
                     <input
                       type="date"
                       value={startDateFilter}
@@ -342,9 +568,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-                      End Date
-                    </label>
+                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">End Date</label>
                     <input
                       type="date"
                       value={endDateFilter}
@@ -354,7 +578,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Table */}
+                {/* Invoices Table */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
@@ -374,46 +598,26 @@ export default function App() {
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         {invLoading ? (
                           <tr>
-                            <td colSpan="9" className="px-4 py-8 text-center text-slate-400">
-                              Loading invoices...
-                            </td>
+                            <td colSpan="9" className="px-4 py-8 text-center text-slate-400">Loading invoices...</td>
                           </tr>
                         ) : invoices.length === 0 ? (
                           <tr>
-                            <td colSpan="9" className="px-4 py-8 text-center text-slate-400">
-                              No invoices found. Click "+ Generate Invoice" to create one.
-                            </td>
+                            <td colSpan="9" className="px-4 py-8 text-center text-slate-400">No invoices found.</td>
                           </tr>
                         ) : (
                           invoices.map((inv) => {
                             const isPaid = (inv.status || '').toLowerCase() === 'paid';
-                            const badgeColor = isPaid
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-amber-100 text-amber-700';
+                            const badgeColor = isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
 
                             return (
                               <tr key={inv.id} className="hover:bg-slate-50/70 transition">
-                                <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                                  {inv.invoice_number}
-                                </td>
-                                <td className="px-4 py-3 font-medium text-slate-800">
-                                  {inv.customer_name || `Customer ${inv.customer_id.substring(0, 6)}`}
-                                </td>
-                                <td className="px-4 py-3 text-slate-600">
-                                  {inv.plan_name || 'Standard Plan'}
-                                </td>
-                                <td className="px-4 py-3 text-slate-500">
-                                  {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : '-'}
-                                </td>
-                                <td className="px-4 py-3 font-mono">
-                                  ${parseFloat(inv.subtotal).toFixed(2)}
-                                </td>
-                                <td className="px-4 py-3 font-mono text-slate-500">
-                                  ${parseFloat(inv.tax_amount).toFixed(2)}
-                                </td>
-                                <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                                  ${parseFloat(inv.total_amount).toFixed(2)}
-                                </td>
+                                <td className="px-4 py-3 font-mono font-bold text-slate-900">{inv.invoice_number}</td>
+                                <td className="px-4 py-3 font-medium text-slate-800">{inv.customer_name || 'Customer'}</td>
+                                <td className="px-4 py-3 text-slate-600">{inv.plan_name || 'Standard Plan'}</td>
+                                <td className="px-4 py-3 text-slate-500">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : '-'}</td>
+                                <td className="px-4 py-3 font-mono">${parseFloat(inv.subtotal).toFixed(2)}</td>
+                                <td className="px-4 py-3 font-mono text-slate-500">${parseFloat(inv.tax_amount).toFixed(2)}</td>
+                                <td className="px-4 py-3 font-mono font-bold text-slate-900">${parseFloat(inv.total_amount).toFixed(2)}</td>
                                 <td className="px-4 py-3">
                                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}`}>
                                     {inv.status}
@@ -451,12 +655,8 @@ export default function App() {
                   <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-xl">
                     ✓
                   </div>
-                  <h2 className="text-xl font-bold text-center text-slate-800">
-                    JWT Session Authenticated
-                  </h2>
-                  <p className="text-center text-xs text-slate-500 mt-1 mb-6">
-                    Active Session Token verified via JWT Bearer
-                  </p>
+                  <h2 className="text-xl font-bold text-center text-slate-800">JWT Session Authenticated</h2>
+                  <p className="text-center text-xs text-slate-500 mt-1 mb-6">Active Session Token verified via JWT Bearer</p>
 
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3">
                     <div className="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
@@ -487,7 +687,6 @@ export default function App() {
         /* UNAUTHENTICATED SIGN IN / SIGN UP */
         <main className="max-w-md mx-auto w-full my-auto py-12 px-4">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            {/* Tab Selector */}
             <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-50/50">
               <button
                 type="button"
@@ -619,189 +818,139 @@ export default function App() {
         </main>
       )}
 
-      {/* GENERATE INVOICE MODAL */}
-      {isGenerateModalOpen && (
+      {/* PLAN CHANGE & PRORATION MODAL (Task 2) */}
+      {isPlanChangeModalOpen && selectedSubForChange && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-slate-900 text-base">Generate New Invoice</h3>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Plan Change Screen</h3>
+                <p className="text-xs text-slate-500">Upgrade or downgrade with fair mid-cycle proration</p>
+              </div>
               <button
-                onClick={() => setIsGenerateModalOpen(false)}
+                onClick={() => setIsPlanChangeModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 text-lg"
               >
                 &times;
               </button>
             </div>
 
-            {genError && (
-              <div className="p-2.5 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200">
-                {genError}
+            {planChangeError && (
+              <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200">
+                {planChangeError}
               </div>
             )}
 
-            <form onSubmit={handleGenerateInvoice} className="space-y-3">
+            {/* Current Plan Card */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Select Subscription
-                </label>
-                <select
-                  required
-                  value={selectedSubId}
-                  onChange={(e) => setSelectedSubId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                >
-                  {subscriptions.length === 0 ? (
-                    <option value="">No subscriptions available</option>
-                  ) : (
-                    subscriptions.map((s) => {
-                      const custName = s.customer ? s.customer.name : s.customer_id.substring(0, 8);
-                      const planName = s.plan ? s.plan.name : 'Plan';
-                      return (
-                        <option key={s.id} value={s.id}>
-                          Sub #{s.id.substring(0, 8)} - {custName} ({planName})
-                        </option>
-                      );
-                    })
-                  )}
-                </select>
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                  Current Plan
+                </span>
+                <div className="font-bold text-slate-900 text-sm">
+                  {selectedSubForChange.plan ? selectedSubForChange.plan.name : 'Current Plan'}
+                </div>
+                <div className="text-xs text-slate-500">
+                  Renewal: {new Date(selectedSubForChange.end_date).toLocaleDateString()}
+                </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Tax Rate (0.10 = 10%)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="1"
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+              <div className="text-base font-bold text-slate-900 font-mono">
+                ${selectedSubForChange.plan ? parseFloat(selectedSubForChange.plan.price).toFixed(2) : '0.00'}/month
               </div>
-
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsGenerateModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={genLoading || !selectedSubId}
-                  className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
-                >
-                  {genLoading ? 'Generating...' : 'Generate Invoice'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW INVOICE MODAL */}
-      {selectedInvoice && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">
-                  {selectedInvoice.invoice_number}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Issued: {new Date(selectedInvoice.invoice_date).toLocaleString()}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedInvoice(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg"
-              >
-                &times;
-              </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                  <span className="text-slate-400 block font-medium">Customer:</span>
-                  <span className="font-semibold text-slate-800">
-                    {selectedInvoice.customer_name || selectedInvoice.customer_id}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block font-medium">Status:</span>
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                      (selectedInvoice.status || '').toLowerCase() === 'paid'
-                        ? 'text-emerald-700 bg-emerald-100'
-                        : 'text-amber-700 bg-amber-100'
-                    }`}
-                  >
-                    {selectedInvoice.status}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold text-slate-700 mb-2">Itemized Breakdown</h4>
-                <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
-                  {selectedInvoice.line_items && selectedInvoice.line_items.length > 0 ? (
-                    selectedInvoice.line_items.map((item) => (
-                      <div key={item.id} className="p-2.5 flex justify-between items-center text-xs">
+            {/* Select New Plan */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                Select New Plan
+              </label>
+              <div className="space-y-2">
+                {plans
+                  .filter((p) => p.id !== selectedSubForChange.plan_id && p.is_active)
+                  .map((p) => (
+                    <label
+                      key={p.id}
+                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${
+                        targetPlanId === p.id
+                          ? 'border-indigo-600 bg-indigo-50/40 ring-1 ring-indigo-500'
+                          : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="target-plan"
+                          value={p.id}
+                          checked={targetPlanId === p.id}
+                          onChange={() => handleTargetPlanSelect(p.id)}
+                          className="text-indigo-600 focus:ring-indigo-500"
+                        />
                         <div>
-                          <div className="font-medium text-slate-800">{item.description}</div>
-                          <div className="text-[10px] text-slate-400 capitalize">
-                            {item.line_item_type.replace('_', ' ')}
-                          </div>
-                        </div>
-                        <div className="font-mono font-bold text-slate-900">
-                          ${parseFloat(item.amount).toFixed(2)}
+                          <div className="text-xs font-bold text-slate-800">{p.name}</div>
+                          <div className="text-[10px] text-slate-400 capitalize">{p.billing_interval} billing</div>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-3 text-center text-slate-400">
-                      Standard Subscription Plan Fee
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-3 bg-indigo-50/70 rounded-xl space-y-1.5 font-semibold text-slate-800">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Subtotal:</span>
-                  <span>${parseFloat(selectedInvoice.subtotal).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Tax Amount:</span>
-                  <span>${parseFloat(selectedInvoice.tax_amount).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm pt-1 border-t border-indigo-200 text-indigo-700 font-bold">
-                  <span>Total Amount:</span>
-                  <span>${parseFloat(selectedInvoice.total_amount).toFixed(2)}</span>
-                </div>
+                      <div className="text-xs font-mono font-bold text-slate-900">
+                        ${parseFloat(p.price).toFixed(2)}/mo
+                      </div>
+                    </label>
+                  ))}
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+            {/* Proration Preview (Before Confirming) */}
+            {previewLoading ? (
+              <div className="p-4 text-center text-xs text-slate-400">Calculating proration...</div>
+            ) : prorationPreview ? (
+              <div className="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-indigo-200 pb-2">
+                  <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                    Plan Upgrade Summary
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 font-semibold">
+                    {prorationPreview.proration.remaining_days} Days Remaining
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">Unused Plan Credit:</span>
+                    <span className="font-mono font-bold text-emerald-600">
+                      -${parseFloat(prorationPreview.proration.unused_credit).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">New Plan Charge:</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      +${parseFloat(prorationPreview.proration.new_charge).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-indigo-200 text-sm font-bold text-indigo-950">
+                    <span>Amount Due:</span>
+                    <span className="font-mono font-extrabold text-indigo-700">
+                      ${parseFloat(prorationPreview.proration.net_amount_due).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setSelectedInvoice(null)}
+                onClick={() => setIsPlanChangeModalOpen(false)}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
               >
-                Close
+                Cancel
               </button>
-              <a
-                href={`${API_BASE_URL}/invoices/${selectedInvoice.id}/pdf`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition inline-flex items-center space-x-1.5"
+              <button
+                type="button"
+                disabled={confirmLoading || !targetPlanId || !prorationPreview}
+                onClick={handleConfirmPlanChange}
+                className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
               >
-                <span>⬇ Download PDF</span>
-              </a>
+                {confirmLoading ? 'Applying...' : 'Confirm Upgrade'}
+              </button>
             </div>
           </div>
         </div>

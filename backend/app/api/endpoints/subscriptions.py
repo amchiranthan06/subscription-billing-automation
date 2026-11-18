@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,9 +10,10 @@ from app.models.enums import (
 )
 from app.schemas.schemas import (
     SubscriptionCreate, SubscriptionResponse, SubscriptionCancel, SubscriptionStatusTransition,
-    SubscriptionChangePlan
+    SubscriptionChangePlan, ProrationPreviewRequest, ProrationPreviewResponse, PlanChangeHistoryItem
 )
 from app.services.state_machine import transition_subscription, InvalidStateTransitionError
+from app.services.proration import preview_plan_change, apply_plan_change_with_proration
 
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
 
@@ -107,6 +109,28 @@ def get_subscription(subscription_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     return sub
 
+@router.post("/{subscription_id}/proration-preview", response_model=ProrationPreviewResponse)
+def get_proration_preview(
+    subscription_id: str,
+    payload: ProrationPreviewRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Milestone 2 - Task 2: Live preview of mid-cycle proration adjustment
+    before confirming the upgrade/downgrade.
+    Computes remaining days, unused old plan credit, new plan charge, and net amount due.
+    """
+    try:
+        preview = preview_plan_change(
+            db=db,
+            subscription_id=subscription_id,
+            new_plan_id=payload.new_plan_id
+        )
+        return preview
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @router.post("/{subscription_id}/change-plan", response_model=SubscriptionResponse)
 def change_subscription_plan(
     subscription_id: str,
@@ -114,10 +138,13 @@ def change_subscription_plan(
     db: Session = Depends(get_db)
 ):
     """
-    Task 8: Upgrade or downgrade a subscription to a new active plan.
+    Milestone 2 - Task 2: Upgrade or downgrade a subscription to a new active plan.
     - Validates target plan exists and is active.
     - Prevents changing to the same plan or changing cancelled subscriptions.
-    - Records audit log with old and new plan details.
+    - Computes mid-cycle proration (unused old plan credit, new plan charge).
+    - Automatically generates an itemized adjustment invoice (PRORATION_CREDIT / PRORATION_DEBIT).
+    - Updates subscription with the new plan.
+    - Records immutable audit log with full financial details.
     """
     sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
     if not sub:
@@ -136,28 +163,52 @@ def change_subscription_plan(
     if new_plan.id == sub.plan_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subscription is already on this plan")
 
-    old_plan = db.query(Plan).filter(Plan.id == sub.plan_id).first()
-    old_plan_name = old_plan.name if old_plan else "Unknown"
-    old_plan_id = sub.plan_id
+    try:
+        apply_plan_change_with_proration(
+            db=db,
+            subscription_id=subscription_id,
+            new_plan_id=plan_in.new_plan_id
+        )
+        db.refresh(sub)
+        return sub
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    sub.plan_id = new_plan.id
-    now = datetime.now(timezone.utc)
-    sub.updated_at = now
 
-    audit = AuditLog(
-        entity_type="subscription",
-        entity_id=sub.id,
-        action="plan_changed",
-        old_value={"plan_id": old_plan_id, "plan_name": old_plan_name},
-        new_value={"plan_id": new_plan.id, "plan_name": new_plan.name, "prorate": plan_in.prorate},
-        performed_by="customer",
-        customer_id=sub.customer_id,
-        subscription_id=sub.id
+@router.get("/{subscription_id}/plan-history", response_model=list[PlanChangeHistoryItem])
+def get_subscription_plan_history(
+    subscription_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Milestone 2 - Task 2: Retrieve historical plan change timeline for a subscription.
+    """
+    sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+
+    logs = (
+        db.query(AuditLog)
+        .filter(AuditLog.subscription_id == subscription_id, AuditLog.action == "plan_changed")
+        .order_by(AuditLog.created_at.desc())
+        .all()
     )
-    db.add(audit)
-    db.commit()
-    db.refresh(sub)
-    return sub
+
+    history = []
+    for log in logs:
+        old_val = log.old_value or {}
+        new_val = log.new_value or {}
+        history.append({
+            "date": log.created_at,
+            "from_plan": old_val.get("plan_name", "Previous Plan"),
+            "to_plan": new_val.get("plan_name", "New Plan"),
+            "unused_credit": Decimal(str(new_val.get("unused_credit", 0.00))),
+            "new_charge": Decimal(str(new_val.get("new_charge", 0.00))),
+            "net_adjustment": Decimal(str(new_val.get("net_amount_due", 0.00))),
+            "invoice_number": new_val.get("invoice_number")
+        })
+
+    return history
 
 @router.post("/{subscription_id}/pause", response_model=SubscriptionResponse)
 def pause_subscription(subscription_id: str, db: Session = Depends(get_db)):

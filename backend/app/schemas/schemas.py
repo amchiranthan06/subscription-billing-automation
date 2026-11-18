@@ -103,6 +103,42 @@ class SubscriptionChangePlan(BaseModel):
     new_plan_id: str
     prorate: bool = True
 
+class ProrationPreviewRequest(BaseModel):
+    new_plan_id: str
+
+class ProrationDetail(BaseModel):
+    total_days: int
+    remaining_days: int
+    remaining_ratio: float
+    unused_credit: Decimal
+    new_charge: Decimal
+    net_amount_due: Decimal
+    is_upgrade: bool
+    is_downgrade: bool
+
+class PlanSummary(BaseModel):
+    id: str
+    name: str
+    price: Decimal
+    billing_interval: Optional[str] = "monthly"
+
+class ProrationPreviewResponse(BaseModel):
+    subscription_id: str
+    current_plan: PlanSummary
+    new_plan: PlanSummary
+    cycle_start_date: datetime
+    cycle_end_date: datetime
+    proration: ProrationDetail
+
+class PlanChangeHistoryItem(BaseModel):
+    date: datetime
+    from_plan: str
+    to_plan: str
+    unused_credit: Optional[Decimal] = Decimal("0.00")
+    new_charge: Optional[Decimal] = Decimal("0.00")
+    net_adjustment: Optional[Decimal] = Decimal("0.00")
+    invoice_number: Optional[str] = None
+
 class SubscriptionCancel(BaseModel):
     timing: CancellationTiming = CancellationTiming.IMMEDIATE
     reason: Optional[str] = "Customer requested cancellation"

@@ -179,6 +179,38 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Task 2: Proration & Plan Change Logic ✅
+* **Objective**: Allow customers to upgrade or downgrade plans mid-cycle and charge them fairly with automated credit/debit proration.
+* **Requirements Completed**:
+  - **Accurate Mid-Cycle Proration Formula**:
+    - Computes `remaining_days` and `remaining_ratio` in the billing cycle.
+    - `Unused Plan Credit = Current Price × Remaining Ratio`
+    - `New Plan Charge = New Price × Remaining Ratio`
+    - `Net Amount Due = New Charge - Unused Credit`
+  - **Live Proration Preview**:
+    - Previews the exact financial forecast before confirming plan changes.
+    - Displays Unused Plan Credit (`-₹500.00`), New Plan Charge (`+₹1000.00`), and Net Amount Due (`₹500.00`).
+  - **Automated Adjustment Invoice**:
+    - Generates an adjustment invoice with itemized line items:
+      - Line Item 1: `PRORATION_CREDIT` (Unused current plan credit).
+      - Line Item 2: `PRORATION_DEBIT` (New plan prorated charge).
+  - **Subscription Plan Update**: Switches subscription `plan_id` to the new target plan.
+  - **Immutable Audit Trail**: Automatically logs `action="plan_changed"` with old plan, new plan, unused credit, new charge, and net amount due.
+  - **Plan Change History Timeline**: Tracks and surfaces chronological timeline of previous plan changes (`Pro → Premium` with date and adjustment amount).
+  - **Interactive UI**:
+    - "Proration & Plans" tab in sidebar.
+    - Current plan view with billing interval and cycle renewal dates.
+    - Plan upgrade/downgrade selection modal with available plans.
+    - Live Proration Preview summary card before confirmation.
+    - Previous Plan Changes timeline cards.
+  - **API Endpoints**:
+    - `POST /api/v1/subscriptions/{id}/proration-preview`: Computes live preview of proration without applying changes.
+    - `POST /api/v1/subscriptions/{id}/change-plan`: Executes the plan upgrade/downgrade with proration and creates invoice adjustments.
+    - `GET /api/v1/subscriptions/{id}/plan-history`: Retrieves historical timeline of plan changes.
+* **Deliverable**: Proration Engine (`app/services/proration.py`), API Endpoints (`app/api/endpoints/subscriptions.py`), and 5 automated unit tests (`tests/test_proration_logic.py`).
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -191,16 +223,17 @@ backend/
 │   │   │   ├── billing_cycles.py        # Task 9 Billing cycle endpoints
 │   │   │   ├── customers.py             # Customer CRUD endpoints (Task 6)
 │   │   │   ├── invoices.py              # Milestone 2 Task 1 Invoice endpoints & PDF export
-│   │   │   ├── pages.py                 # Interactive HTML UI pages (Auth, Invoices, Profile)
+│   │   │   ├── pages.py                 # Interactive HTML UI pages (Auth, Invoices, Subscriptions & Proration)
 │   │   │   ├── plans.py                 # Plan CRUD endpoints (Task 5)
-│   │   │   └── subscriptions.py         # Subscription Creation & Operations (Tasks 4, 7, 8)
+│   │   │   └── subscriptions.py         # Milestone 2 Task 2 Proration Preview & Plan Change APIs
 │   ├── core/                            # Configuration (.env) & Database engine (PostgreSQL/SQLAlchemy)
 │   ├── models/                          # 7 Core ORM models (Plans, Customers, Subscriptions, Invoices, etc.)
-│   ├── schemas/                         # Pydantic validation schemas
+│   ├── schemas/                         # Pydantic validation schemas (Proration, Invoices, etc.)
 │   ├── services/
 │   │   ├── audit.py                     # Task 10 Centralized audit logging service
 │   │   ├── billing_cycle.py             # Task 9 Billing cycle calculation service
 │   │   ├── invoice.py                   # Milestone 2 Task 1 Invoice generation & ReportLab PDF engine
+│   │   ├── proration.py                 # Milestone 2 Task 2 Proration calculation & plan change engine
 │   │   └── state_machine.py             # Task 4 State Machine & transition logic
 │   └── main.py                          # FastAPI application entrypoint
 ├── tests/
@@ -211,6 +244,7 @@ backend/
 │   ├── test_database_schema.py          # Task 2 Schema inspection tests (9 tests)
 │   ├── test_invoice_generation.py       # Milestone 2 Task 1 Invoice tests (7 tests)
 │   ├── test_plans_api.py                # Task 5 Plan API tests (4 tests)
+│   ├── test_proration_logic.py          # Milestone 2 Task 2 Proration tests (5 tests)
 │   ├── test_state_machine.py            # Task 4 State transition tests (9 tests)
 │   ├── test_subscription_creation_api.py# Task 7 Subscription creation tests (4 tests)
 │   └── test_subscription_operations_api.py # Task 8 Subscription operations tests (5 tests)
@@ -260,6 +294,9 @@ python backend/tests/test_audit_logging.py
 # Run Invoice Generation Tests (Milestone 2 Task 1 - 7 tests)
 python backend/tests/test_invoice_generation.py
 
-# Or run all 54 tests together:
+# Run Proration & Plan Change Tests (Milestone 2 Task 2 - 5 tests)
+python backend/tests/test_proration_logic.py
+
+# Or run all 59 tests together:
 python -m unittest discover backend/tests
 ```

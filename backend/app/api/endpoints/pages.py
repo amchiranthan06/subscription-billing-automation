@@ -184,11 +184,16 @@ def home_page():
                     <span class="text-base">📄</span>
                     <span>Invoices (M2-T1)</span>
                 </button>
+
+                <button id="nav-tab-subscriptions" onclick="switchTab('subscriptions')" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-left">
+                    <span class="text-base">🔁</span>
+                    <span>Proration & Plans (M2-T2)</span>
+                </button>
                 
                 <div class="pt-6 mt-6 border-t border-slate-100">
                     <div class="p-3 bg-purple-50/50 rounded-xl border border-purple-100 text-xs text-purple-800">
                         <div class="font-bold mb-1">Milestone 2 Active</div>
-                        <div class="text-[11px] text-purple-600">Task 1: Automated Invoice Generation with PDF export & filters.</div>
+                        <div class="text-[11px] text-purple-600">Task 2: Mid-cycle Proration, Upgrade/Downgrade calculation & live preview.</div>
                     </div>
                 </div>
             </aside>
@@ -292,7 +297,97 @@ def home_page():
                         </div>
                     </div>
                 </section>
+
+                <!-- 3. SUBSCRIPTIONS & PRORATION SECTION (Milestone 2 - Task 2) -->
+                <section id="section-subscriptions" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Subscription & Proration Management</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Mid-cycle plan upgrade/downgrade with automated unused credit and debit calculations.</p>
+                        </div>
+                    </div>
+
+                    <!-- Active Subscriptions List -->
+                    <div id="subs-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">Loading subscriptions...</div>
+                    </div>
+
+                    <!-- Plan Change History Timeline -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 class="font-bold text-slate-900 text-sm md:text-base flex items-center space-x-2">
+                                <span>📜</span>
+                                <span>Previous Plan Changes</span>
+                            </h3>
+                            <span class="text-xs text-slate-400">Audit-backed history</span>
+                        </div>
+                        <div id="plan-history-container" class="space-y-3">
+                            <p class="text-xs text-slate-400">Select or upgrade a subscription to view historical adjustments.</p>
+                        </div>
+                    </div>
+                </section>
             </main>
+        </div>
+
+        <!-- PLAN CHANGE & PRORATION MODAL (Milestone 2 - Task 2) -->
+        <div id="plan-change-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-5 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Change Subscription Plan</h3>
+                        <p class="text-xs text-slate-500">Fair mid-cycle proration calculation</p>
+                    </div>
+                    <button onclick="closePlanChangeModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                </div>
+
+                <div id="plan-modal-error" class="hidden p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-200"></div>
+
+                <!-- Current Plan Card -->
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                    <div>
+                        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Current Plan</span>
+                        <div id="modal-curr-plan-name" class="font-bold text-slate-900 text-sm">Pro Plan</div>
+                        <div id="modal-curr-cycle-info" class="text-xs text-slate-500">Cycle: -</div>
+                    </div>
+                    <div id="modal-curr-plan-price" class="text-base font-bold text-slate-900 font-mono">$1000/month</div>
+                </div>
+
+                <!-- Select New Plan -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Select New Plan</label>
+                    <div id="modal-plans-radio-container" class="space-y-2">
+                        <div class="text-xs text-slate-400">Loading available plans...</div>
+                    </div>
+                </div>
+
+                <!-- Proration Preview Card (Before Confirming) -->
+                <div id="proration-preview-card" class="hidden p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-2.5">
+                    <div class="flex items-center justify-between border-b border-purple-200 pb-2">
+                        <span class="text-xs font-bold text-purple-900 uppercase tracking-wider">Plan Upgrade Summary</span>
+                        <span id="prev-remaining-days" class="text-[11px] px-2 py-0.5 rounded-full bg-purple-200 text-purple-800 font-semibold">15 Days Remaining</span>
+                    </div>
+
+                    <div class="space-y-1.5 text-xs text-slate-700">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">Unused Plan Credit:</span>
+                            <span id="prev-unused-credit" class="font-mono font-bold text-emerald-600">-$500.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">New Plan Charge:</span>
+                            <span id="prev-new-charge" class="font-mono font-bold text-slate-900">+$1000.00</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-purple-200 text-sm font-bold text-purple-900">
+                            <span>Amount Due:</span>
+                            <span id="prev-amount-due" class="font-mono font-extrabold text-purple-700">$500.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closePlanChangeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                    <button id="btn-confirm-upgrade" type="button" onclick="handleConfirmPlanChange()" disabled class="px-4 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-sm transition disabled:opacity-50">Confirm Upgrade</button>
+                </div>
+            </div>
         </div>
 
         <!-- GENERATE INVOICE MODAL -->
@@ -379,25 +474,39 @@ def home_page():
 
         <script>
             let currentTab = 'profile';
+            let selectedSubForChange = null;
+            let selectedNewPlanId = null;
 
             function switchTab(tab) {{
                 currentTab = tab;
                 const tabProfile = document.getElementById('nav-tab-profile');
                 const tabInvoices = document.getElementById('nav-tab-invoices');
+                const tabSubs = document.getElementById('nav-tab-subscriptions');
                 const secProfile = document.getElementById('section-profile');
                 const secInvoices = document.getElementById('section-invoices');
+                const secSubs = document.getElementById('section-subscriptions');
+
+                const inactiveBtn = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-left';
+                const activeBtn = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 transition text-left';
+
+                tabProfile.className = inactiveBtn;
+                tabInvoices.className = inactiveBtn;
+                tabSubs.className = inactiveBtn;
+                secProfile.classList.add('hidden');
+                secInvoices.classList.add('hidden');
+                secSubs.classList.add('hidden');
 
                 if (tab === 'profile') {{
-                    tabProfile.className = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 transition text-left';
-                    tabInvoices.className = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-left';
+                    tabProfile.className = activeBtn;
                     secProfile.classList.remove('hidden');
-                    secInvoices.classList.add('hidden');
-                }} else {{
-                    tabProfile.className = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-left';
-                    tabInvoices.className = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 transition text-left';
-                    secProfile.classList.add('hidden');
+                }} else if (tab === 'invoices') {{
+                    tabInvoices.className = activeBtn;
                     secInvoices.classList.remove('hidden');
                     loadInvoices();
+                }} else if (tab === 'subscriptions') {{
+                    tabSubs.className = activeBtn;
+                    secSubs.classList.remove('hidden');
+                    loadSubscriptions();
                 }}
             }}
 
@@ -584,6 +693,218 @@ def home_page():
                 }} catch (err) {{
                     errDiv.textContent = err.message;
                     errDiv.classList.remove('hidden');
+                }}
+            }}
+
+            // --- MILESTONE 2 TASK 2: SUBSCRIPTIONS & PRORATION LOGIC ---
+            let cachedSubs = [];
+            let cachedPlans = [];
+
+            async function loadSubscriptions() {{
+                const container = document.getElementById('subs-cards-container');
+                try {{
+                    const [subRes, planRes] = await Promise.all([
+                        fetch('/api/v1/subscriptions'),
+                        fetch('/api/v1/plans')
+                    ]);
+                    cachedSubs = await subRes.json();
+                    cachedPlans = await planRes.json();
+
+                    if (!Array.isArray(cachedSubs) || cachedSubs.length === 0) {{
+                        container.innerHTML = `<div class="col-span-2 p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">No active subscriptions found.</div>`;
+                        return;
+                    }}
+
+                    container.innerHTML = cachedSubs.map(s => {{
+                        const custName = s.customer ? s.customer.name : 'Customer ' + s.customer_id.substring(0,6);
+                        const planName = s.plan ? s.plan.name : 'Standard Plan';
+                        const planPrice = s.plan ? parseFloat(s.plan.price).toFixed(2) : '0.00';
+                        const interval = s.plan ? s.plan.billing_interval : 'monthly';
+                        const startDate = s.start_date ? new Date(s.start_date).toLocaleDateString() : '-';
+                        const endDate = s.end_date ? new Date(s.end_date).toLocaleDateString() : '-';
+
+                        return `
+                            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full uppercase tracking-wider">Sub #${{s.id.substring(0,8)}}</span>
+                                        <h3 class="font-bold text-slate-900 text-base mt-2">${{custName}}</h3>
+                                        <p class="text-xs text-slate-500">Period: ${{startDate}} → ${{endDate}}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-lg font-mono font-extrabold text-slate-900">$${{planPrice}}</div>
+                                        <div class="text-[10px] text-slate-400 uppercase">per ${{interval}}</div>
+                                    </div>
+                                </div>
+
+                                <div class="p-3 bg-slate-50 rounded-xl flex justify-between items-center text-xs">
+                                    <span class="text-slate-500 font-medium">Current Plan:</span>
+                                    <span class="font-bold text-purple-700">${{planName}}</span>
+                                </div>
+
+                                <div class="flex justify-between items-center pt-2">
+                                    <button onclick="loadPlanHistory('${{s.id}}')" class="text-xs text-slate-500 hover:text-slate-700 font-semibold underline">View History</button>
+                                    <button onclick="openPlanChangeModal('${{s.id}}')" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition">
+                                        Upgrade / Change Plan
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }}).join('');
+
+                    if (cachedSubs.length > 0) {{
+                        loadPlanHistory(cachedSubs[0].id);
+                    }}
+                }} catch (err) {{
+                    container.innerHTML = `<div class="col-span-2 p-8 text-center text-red-500 bg-white rounded-2xl border border-slate-200">Failed to load subscriptions: ${{err.message}}</div>`;
+                }}
+            }}
+
+            async function openPlanChangeModal(subId) {{
+                selectedSubForChange = cachedSubs.find(s => s.id === subId);
+                if (!selectedSubForChange) return;
+
+                const modal = document.getElementById('plan-change-modal');
+                const errDiv = document.getElementById('plan-modal-error');
+                const previewCard = document.getElementById('proration-preview-card');
+                const btnConfirm = document.getElementById('btn-confirm-upgrade');
+                errDiv.classList.add('hidden');
+                previewCard.classList.add('hidden');
+                btnConfirm.disabled = true;
+
+                const currPlan = selectedSubForChange.plan || {{}};
+                document.getElementById('modal-curr-plan-name').textContent = currPlan.name || 'Current Plan';
+                document.getElementById('modal-curr-plan-price').textContent = `$${{parseFloat(currPlan.price || 0).toFixed(2)}}/${{currPlan.billing_interval || 'mo'}}`;
+                document.getElementById('modal-curr-cycle-info').textContent = `Renewal: ${{new Date(selectedSubForChange.end_date).toLocaleDateString()}}`;
+
+                const plansContainer = document.getElementById('modal-plans-radio-container');
+                const availablePlans = cachedPlans.filter(p => p.id !== currPlan.id && p.is_active);
+
+                if (availablePlans.length === 0) {{
+                    plansContainer.innerHTML = `<div class="text-xs text-slate-400">No other active plans available to switch to.</div>`;
+                }} else {{
+                    plansContainer.innerHTML = availablePlans.map(p => `
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50/30 cursor-pointer transition">
+                            <div class="flex items-center space-x-3">
+                                <input type="radio" name="target-plan" value="${{p.id}}" onchange="fetchProrationPreview('${{p.id}}')" class="text-purple-600 focus:ring-purple-500">
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800">${{p.name}}</div>
+                                    <div class="text-[10px] text-slate-400 capitalize">${{p.billing_interval}} billing</div>
+                                </div>
+                            </div>
+                            <div class="text-xs font-mono font-bold text-slate-900">$${{parseFloat(p.price).toFixed(2)}}</div>
+                        </label>
+                    `).join('');
+                }}
+
+                modal.classList.remove('hidden');
+            }}
+
+            function closePlanChangeModal() {{
+                document.getElementById('plan-change-modal').classList.add('hidden');
+            }}
+
+            async function fetchProrationPreview(newPlanId) {{
+                selectedNewPlanId = newPlanId;
+                const errDiv = document.getElementById('plan-modal-error');
+                const previewCard = document.getElementById('proration-preview-card');
+                const btnConfirm = document.getElementById('btn-confirm-upgrade');
+                errDiv.classList.add('hidden');
+
+                try {{
+                    const res = await fetch(`/api/v1/subscriptions/${{selectedSubForChange.id}}/proration-preview`, {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ new_plan_id: newPlanId }})
+                    }});
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.detail || 'Failed to preview proration');
+
+                    const p = data.proration;
+                    document.getElementById('prev-remaining-days').textContent = `${{p.remaining_days}} Days Remaining`;
+                    document.getElementById('prev-unused-credit').textContent = `-$${{parseFloat(p.unused_credit).toFixed(2)}}`;
+                    document.getElementById('prev-new-charge').textContent = `+$${{parseFloat(p.new_charge).toFixed(2)}}`;
+                    
+                    const amountDueEl = document.getElementById('prev-amount-due');
+                    if (p.net_amount_due >= 0) {{
+                        amountDueEl.textContent = `$${{parseFloat(p.net_amount_due).toFixed(2)}}`;
+                        amountDueEl.className = 'font-mono font-extrabold text-purple-700';
+                        btnConfirm.textContent = 'Confirm Upgrade';
+                    }} else {{
+                        amountDueEl.textContent = `-$${{Math.abs(parseFloat(p.net_amount_due)).toFixed(2)}} (Credit)`;
+                        amountDueEl.className = 'font-mono font-extrabold text-emerald-600';
+                        btnConfirm.textContent = 'Confirm Downgrade';
+                    }}
+
+                    previewCard.classList.remove('hidden');
+                    btnConfirm.disabled = false;
+                }} catch (err) {{
+                    errDiv.textContent = err.message;
+                    errDiv.classList.remove('hidden');
+                    previewCard.classList.add('hidden');
+                    btnConfirm.disabled = true;
+                }}
+            }}
+
+            async function handleConfirmPlanChange() {{
+                const errDiv = document.getElementById('plan-modal-error');
+                const btnConfirm = document.getElementById('btn-confirm-upgrade');
+                btnConfirm.disabled = true;
+                btnConfirm.textContent = 'Applying Change...';
+
+                try {{
+                    const res = await fetch(`/api/v1/subscriptions/${{selectedSubForChange.id}}/change-plan`, {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ new_plan_id: selectedNewPlanId, prorate: true }})
+                    }});
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.detail || 'Plan change failed');
+
+                    closePlanChangeModal();
+                    await loadSubscriptions();
+                    loadPlanHistory(selectedSubForChange.id);
+                }} catch (err) {{
+                    errDiv.textContent = err.message;
+                    errDiv.classList.remove('hidden');
+                    btnConfirm.disabled = false;
+                }}
+            }}
+
+            async function loadPlanHistory(subId) {{
+                const container = document.getElementById('plan-history-container');
+                try {{
+                    const res = await fetch(`/api/v1/subscriptions/${{subId}}/plan-history`);
+                    const history = await res.json();
+
+                    if (!Array.isArray(history) || history.length === 0) {{
+                        container.innerHTML = `<p class="text-xs text-slate-400">No previous plan changes recorded for this subscription.</p>`;
+                        return;
+                    }}
+
+                    container.innerHTML = history.map(item => {{
+                        const dateStr = item.date ? new Date(item.date).toLocaleDateString() : '-';
+                        const adj = parseFloat(item.net_adjustment || 0);
+                        const adjClass = adj >= 0 ? 'text-purple-700 bg-purple-50' : 'text-emerald-700 bg-emerald-50';
+
+                        return `
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                                <div class="flex items-center space-x-3">
+                                    <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                                    <div>
+                                        <span class="font-bold text-slate-800">${{item.from_plan}} → ${{item.to_plan}}</span>
+                                        <span class="text-slate-400 text-[11px] ml-2">${{dateStr}}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <span class="font-mono font-bold px-2 py-0.5 rounded-lg ${{adjClass}}">Adjustment: $${{adj.toFixed(2)}}</span>
+                                    ${{item.invoice_number ? `<span class="text-[10px] font-mono text-slate-400">(${{item.invoice_number}})</span>` : ''}}
+                                </div>
+                            </div>
+                        `;
+                    }}).join('');
+                }} catch (err) {{
+                    container.innerHTML = `<p class="text-xs text-red-500">Failed to load history: ${{err.message}}</p>`;
                 }}
             }}
 
