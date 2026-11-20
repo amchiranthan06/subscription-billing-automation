@@ -189,11 +189,16 @@ def home_page():
                     <span class="text-base">🔁</span>
                     <span>Proration & Plans (M2-T2)</span>
                 </button>
+
+                <button id="nav-tab-payments" onclick="switchTab('payments')" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-left">
+                    <span class="text-base">💳</span>
+                    <span>Payments & Webhooks (M2-T3)</span>
+                </button>
                 
                 <div class="pt-6 mt-6 border-t border-slate-100">
                     <div class="p-3 bg-purple-50/50 rounded-xl border border-purple-100 text-xs text-purple-800">
                         <div class="font-bold mb-1">Milestone 2 Active</div>
-                        <div class="text-[11px] text-purple-600">Task 2: Mid-cycle Proration, Upgrade/Downgrade calculation & live preview.</div>
+                        <div class="text-[11px] text-purple-600">Task 3: Mock Payment Gateway (80/20) & Webhook Lifecycle Engine.</div>
                     </div>
                 </div>
             </aside>
@@ -326,7 +331,153 @@ def home_page():
                         </div>
                     </div>
                 </section>
+
+                <!-- 4. PAYMENTS & WEBHOOKS SECTION (Milestone 2 - Task 3) -->
+                <section id="section-payments" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Payment Gateway & Webhook Simulator</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Mock payment processing with 80/20 probability and automated webhook state updates.</p>
+                        </div>
+                        <button onclick="openProcessPaymentModal()" class="inline-flex items-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition">
+                            <span>⚡</span>
+                            <span>Simulate Payment</span>
+                        </button>
+                    </div>
+
+                    <!-- Filter Controls -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Search Transaction</label>
+                            <input type="text" id="pay-search" oninput="loadPayments()" placeholder="Search TXN-..., INV-..." class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Status Filter</label>
+                            <select id="pay-status" onchange="loadPayments()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                                <option value="">All Transactions</option>
+                                <option value="success">Success / Paid</option>
+                                <option value="failed">Failed</option>
+                                <option value="refunded">Refunded</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="loadPayments()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">
+                                Refresh Transactions
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Payments Table -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-4 py-3.5">Invoice #</th>
+                                        <th class="px-4 py-3.5">Customer</th>
+                                        <th class="px-4 py-3.5">Amount</th>
+                                        <th class="px-4 py-3.5">Status</th>
+                                        <th class="px-4 py-3.5">Transaction ID</th>
+                                        <th class="px-4 py-3.5">Payment Date</th>
+                                        <th class="px-4 py-3.5 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payments-tbody" class="divide-y divide-slate-100 text-slate-700">
+                                    <tr>
+                                        <td colspan="7" class="px-4 py-8 text-center text-slate-400">Loading payment transactions...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
             </main>
+        </div>
+
+        <!-- PROCESS PAYMENT MODAL (Milestone 2 - Task 3) -->
+        <div id="process-payment-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Mock Payment Gateway</h3>
+                        <p class="text-xs text-slate-500">Simulate credit card / bank payment</p>
+                    </div>
+                    <button onclick="closeProcessPaymentModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                </div>
+
+                <div id="pay-modal-error" class="hidden p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-200"></div>
+
+                <form onsubmit="handleExecutePayment(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Select Invoice</label>
+                        <select id="pay-inv-id" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                            <option value="">Loading unpaid invoices...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Gateway Simulation Mode</label>
+                        <select id="pay-force-mode" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                            <option value="">🎲 80% Success / 20% Failure (Realistic)</option>
+                            <option value="success">✅ Force Success (Test Happy Path)</option>
+                            <option value="failed">❌ Force Failure (Test Decline / Past Due)</option>
+                        </select>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-500 space-y-1">
+                        <div><b>Webhook Flow:</b> Payment $\rightarrow$ Webhook $\rightarrow$ Updates Invoice (Unpaid $\rightarrow$ Paid/Failed) & Subscription (Active vs Past Due).</div>
+                    </div>
+
+                    <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeProcessPaymentModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                        <button id="btn-submit-payment" type="submit" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition">
+                            Pay Now ⚡
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- PAYMENT DETAILS MODAL (Task 3 Requirement) -->
+        <div id="payment-details-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 space-y-4">
+                <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Payment Details</h3>
+                        <p class="text-xs text-slate-400">Transaction Receipt</p>
+                    </div>
+                    <button onclick="closePaymentDetailsModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div class="p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500 font-medium">Invoice No:</span>
+                            <span id="dtl-inv-no" class="font-bold font-mono text-slate-900">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500 font-medium">Amount:</span>
+                            <span id="dtl-amount" class="font-bold font-mono text-slate-900">-</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 font-medium">Status:</span>
+                            <span id="dtl-status" class="font-bold uppercase text-[11px] px-2 py-0.5 rounded-full">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500 font-medium">Transaction Id:</span>
+                            <span id="dtl-txn-id" class="font-mono text-purple-700 font-semibold">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500 font-medium">Date of payment:</span>
+                            <span id="dtl-date" class="text-slate-700 font-medium">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closePaymentDetailsModal()" class="px-4 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition">Done</button>
+                </div>
+            </div>
         </div>
 
         <!-- PLAN CHANGE & PRORATION MODAL (Milestone 2 - Task 2) -->
@@ -482,9 +633,12 @@ def home_page():
                 const tabProfile = document.getElementById('nav-tab-profile');
                 const tabInvoices = document.getElementById('nav-tab-invoices');
                 const tabSubs = document.getElementById('nav-tab-subscriptions');
+                const tabPay = document.getElementById('nav-tab-payments');
+
                 const secProfile = document.getElementById('section-profile');
                 const secInvoices = document.getElementById('section-invoices');
                 const secSubs = document.getElementById('section-subscriptions');
+                const secPay = document.getElementById('section-payments');
 
                 const inactiveBtn = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-left';
                 const activeBtn = 'w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 transition text-left';
@@ -492,9 +646,12 @@ def home_page():
                 tabProfile.className = inactiveBtn;
                 tabInvoices.className = inactiveBtn;
                 tabSubs.className = inactiveBtn;
+                if (tabPay) tabPay.className = inactiveBtn;
+
                 secProfile.classList.add('hidden');
                 secInvoices.classList.add('hidden');
                 secSubs.classList.add('hidden');
+                if (secPay) secPay.classList.add('hidden');
 
                 if (tab === 'profile') {{
                     tabProfile.className = activeBtn;
@@ -507,6 +664,10 @@ def home_page():
                     tabSubs.className = activeBtn;
                     secSubs.classList.remove('hidden');
                     loadSubscriptions();
+                }} else if (tab === 'payments') {{
+                    if (tabPay) tabPay.className = activeBtn;
+                    if (secPay) secPay.classList.remove('hidden');
+                    loadPayments();
                 }}
             }}
 
@@ -578,6 +739,7 @@ def home_page():
                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${{badgeColor}}">${{inv.status}}</span>
                                 </td>
                                 <td class="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                                    ${{!isPaid ? `<button onclick="openProcessPaymentModal('${{inv.id}}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold transition">Pay ⚡</button>` : ''}}
                                     <button onclick="viewInvoice('${{inv.id}}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition">View</button>
                                     <a href="/api/v1/invoices/${{inv.id}}/pdf" target="_blank" class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold transition inline-block">PDF</a>
                                 </td>
@@ -906,6 +1068,146 @@ def home_page():
                 }} catch (err) {{
                     container.innerHTML = `<p class="text-xs text-red-500">Failed to load history: ${{err.message}}</p>`;
                 }}
+            }}
+
+            // --- MILESTONE 2 TASK 3: PAYMENTS & WEBHOOKS JS ---
+            let cachedPayments = [];
+
+            async function loadPayments() {{
+                const tbody = document.getElementById('payments-tbody');
+                const search = (document.getElementById('pay-search')?.value || '').trim();
+                const status = (document.getElementById('pay-status')?.value || '').trim();
+                const params = new URLSearchParams();
+                if (search) params.append('search', search);
+                if (status) params.append('status', status);
+
+                try {{
+                    const res = await fetch('/api/v1/payments?' + params.toString());
+                    cachedPayments = await res.json();
+                    if (!Array.isArray(cachedPayments) || cachedPayments.length === 0) {{
+                        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">No payment transactions found.</td></tr>`;
+                        return;
+                    }}
+
+                    tbody.innerHTML = cachedPayments.map(p => {{
+                        const isSuccess = (p.status || '').toLowerCase() === 'success';
+                        const badgeClass = isSuccess ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+                        const dateStr = p.payment_date ? new Date(p.payment_date).toLocaleString() : new Date(p.created_at).toLocaleDateString();
+
+                        return `
+                            <tr class="hover:bg-slate-50/70 transition">
+                                <td class="px-4 py-3 font-mono font-bold text-slate-900">${{p.invoice_number || 'INV'}}</td>
+                                <td class="px-4 py-3 font-medium text-slate-800">${{p.customer_name || 'Customer'}}</td>
+                                <td class="px-4 py-3 font-mono font-bold text-slate-900">$${{parseFloat(p.amount).toFixed(2)}}</td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${{badgeClass}}">${{p.status}}</span>
+                                </td>
+                                <td class="px-4 py-3 font-mono text-purple-700">${{p.payment_reference}}</td>
+                                <td class="px-4 py-3 text-slate-500">${{dateStr}}</td>
+                                <td class="px-4 py-3 text-right">
+                                    <button onclick="showPaymentDetails('${{p.id}}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition">Details</button>
+                                </td>
+                            </tr>
+                        `;
+                    }}).join('');
+                }} catch (err) {{
+                    tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">Failed to load payments: ${{err.message}}</td></tr>`;
+                }}
+            }}
+
+            async function openProcessPaymentModal(preselectedInvoiceId) {{
+                const modal = document.getElementById('process-payment-modal');
+                const select = document.getElementById('pay-inv-id');
+                const errDiv = document.getElementById('pay-modal-error');
+                errDiv.classList.add('hidden');
+                modal.classList.remove('hidden');
+
+                try {{
+                    const res = await fetch('/api/v1/invoices?status=unpaid');
+                    const unpaid = await res.json();
+                    if (!Array.isArray(unpaid) || unpaid.length === 0) {{
+                        select.innerHTML = `<option value="">No unpaid invoices found</option>`;
+                        return;
+                    }}
+
+                    select.innerHTML = unpaid.map(inv => `
+                        <option value="${{inv.id}}" ${{preselectedInvoiceId === inv.id ? 'selected' : ''}}>
+                            ${{inv.invoice_number}} - $${{parseFloat(inv.total_amount).toFixed(2)}} (${{inv.customer_name || 'Customer'}})
+                        </option>
+                    `).join('');
+                }} catch (err) {{
+                    select.innerHTML = `<option value="">Error: ${{err.message}}</option>`;
+                }}
+            }}
+
+            function closeProcessPaymentModal() {{
+                document.getElementById('process-payment-modal').classList.add('hidden');
+            }}
+
+            async function handleExecutePayment(e) {{
+                e.preventDefault();
+                const invId = document.getElementById('pay-inv-id').value;
+                const forceStatus = document.getElementById('pay-force-mode').value;
+                const errDiv = document.getElementById('pay-modal-error');
+                const btn = document.getElementById('btn-submit-payment');
+                errDiv.classList.add('hidden');
+
+                if (!invId) {{
+                    errDiv.textContent = 'Please select an unpaid invoice';
+                    errDiv.classList.remove('hidden');
+                    return;
+                }}
+
+                btn.disabled = true;
+                btn.textContent = 'Contacting Gateway...';
+
+                try {{
+                    const res = await fetch('/api/v1/payments/process', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{
+                            invoice_id: invId,
+                            force_status: forceStatus || null
+                        }})
+                    }});
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.detail || 'Payment failed');
+
+                    closeProcessPaymentModal();
+                    if (currentTab === 'invoices') loadInvoices();
+                    if (currentTab === 'payments') loadPayments();
+                    if (currentTab === 'subscriptions') loadSubscriptions();
+
+                    showReceiptDetails(data);
+                }} catch (err) {{
+                    errDiv.textContent = err.message;
+                    errDiv.classList.remove('hidden');
+                }} finally {{
+                    btn.disabled = false;
+                    btn.textContent = 'Pay Now ⚡';
+                }}
+            }}
+
+            function showReceiptDetails(p) {{
+                document.getElementById('dtl-inv-no').textContent = p.invoice_number || 'INV';
+                document.getElementById('dtl-amount').textContent = `$${{parseFloat(p.amount).toFixed(2)}}`;
+                const isSuccess = (p.status || '').toLowerCase() === 'success';
+                const statusEl = document.getElementById('dtl-status');
+                statusEl.textContent = p.status;
+                statusEl.className = `font-bold uppercase text-[11px] px-2.5 py-1 rounded-full ${{isSuccess ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}}`;
+                document.getElementById('dtl-txn-id').textContent = p.payment_reference;
+                document.getElementById('dtl-date').textContent = p.payment_date ? new Date(p.payment_date).toLocaleString() : new Date().toLocaleString();
+                document.getElementById('payment-details-modal').classList.remove('hidden');
+            }}
+
+            function showPaymentDetails(paymentId) {{
+                const p = cachedPayments.find(item => item.id === paymentId);
+                if (!p) return;
+                showReceiptDetails(p);
+            }}
+
+            function closePaymentDetailsModal() {{
+                document.getElementById('payment-details-modal').classList.add('hidden');
             }}
 
             function logout() {{

@@ -44,6 +44,19 @@ export default function App() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [planHistory, setPlanHistory] = useState([]);
 
+  // Payment Gateway & Webhook States (Task 3)
+  const [payments, setPayments] = useState([]);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payStatusFilter, setPayStatusFilter] = useState('');
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+  const [processInvoiceId, setProcessInvoiceId] = useState('');
+  const [processAmount, setProcessAmount] = useState('');
+  const [simulateMode, setSimulateMode] = useState('random'); // 'random' | 'success' | 'failure'
+  const [processLoading, setProcessLoading] = useState(false);
+  const [processResult, setProcessResult] = useState(null);
+  const [processError, setProcessError] = useState('');
+
   // Check for saved token on load
   useEffect(() => {
     const token = localStorage.getItem('billflow_token');
@@ -59,9 +72,12 @@ export default function App() {
         fetchInvoices();
       } else if (navSection === 'subscriptions') {
         fetchSubscriptionsAndPlans();
+      } else if (navSection === 'payments') {
+        fetchPayments();
+        fetchInvoices();
       }
     }
-  }, [user, navSection, searchFilter, statusFilter, startDateFilter, endDateFilter]);
+  }, [user, navSection, searchFilter, statusFilter, startDateFilter, endDateFilter, payStatusFilter]);
 
   const fetchUserProfile = async (token) => {
     try {
@@ -300,6 +316,69 @@ export default function App() {
     }
   };
 
+  const fetchPayments = async () => {
+    try {
+      setPayLoading(true);
+      const params = new URLSearchParams();
+      if (payStatusFilter.trim()) params.append('status', payStatusFilter.trim());
+      const res = await fetch(`${API_BASE_URL}/payments?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPayments(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch payments:', err);
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
+  const openProcessPaymentModal = (invoice = null) => {
+    if (invoice) {
+      setProcessInvoiceId(String(invoice.id));
+      setProcessAmount(parseFloat(invoice.total_amount).toFixed(2));
+    } else {
+      setProcessInvoiceId('');
+      setProcessAmount('');
+    }
+    setSimulateMode('random');
+    setProcessResult(null);
+    setProcessError('');
+    setIsProcessModalOpen(true);
+  };
+
+  const handleProcessPaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!processInvoiceId || !processAmount) {
+      setProcessError('Invoice ID and Amount are required');
+      return;
+    }
+    setProcessLoading(true);
+    setProcessError('');
+    setProcessResult(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/payments/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoice_id: parseInt(processInvoiceId),
+          amount: parseFloat(processAmount),
+          simulate_mode: simulateMode
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Payment processing failed');
+      setProcessResult(data);
+      fetchPayments();
+      fetchInvoices();
+    } catch (err) {
+      setProcessError(err.message);
+    } finally {
+      setProcessLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* 1. TOP NAVBAR */}
@@ -367,6 +446,18 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setNavSection('payments')}
+              className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition text-left ${
+                navSection === 'payments'
+                  ? 'text-indigo-600 bg-indigo-50'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <span className="text-base">💳</span>
+              <span>Payments & Webhooks (M2-T3)</span>
+            </button>
+
+            <button
               onClick={() => setNavSection('profile')}
               className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition text-left ${
                 navSection === 'profile'
@@ -382,7 +473,7 @@ export default function App() {
               <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 text-xs text-indigo-900">
                 <div className="font-bold mb-1">Milestone 2 Active</div>
                 <div className="text-[11px] text-indigo-700">
-                  Task 2: Mid-cycle Proration with Credit/Debit calculations and Audit trail.
+                  Task 3: Mock Payment Gateway (80/20 probability) & Automated Webhook Lifecycle.
                 </div>
               </div>
             </div>
@@ -638,6 +729,14 @@ export default function App() {
                                   >
                                     PDF ⬇
                                   </a>
+                                  {(inv.status || '').toLowerCase() === 'unpaid' && (
+                                    <button
+                                      onClick={() => { openProcessPaymentModal(inv); setNavSection('payments'); }}
+                                      className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold transition"
+                                    >
+                                      💳 Pay
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -645,6 +744,148 @@ export default function App() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              </div>
+            ) : navSection === 'payments' ? (
+              /* PAYMENTS & WEBHOOKS SECTION (Task 3) */
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Payment Gateway & Webhooks</h2>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                      Mock payment processor: 80% success / 20% failure simulation with webhook-driven invoice &amp; subscription updates.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => openProcessPaymentModal()}
+                    className="inline-flex items-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition"
+                  >
+                    <span>💳</span>
+                    <span>Process Payment</span>
+                  </button>
+                </div>
+
+                {/* Status Filter Bar */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 uppercase mb-1">Filter by Status</label>
+                    <select
+                      value={payStatusFilter}
+                      onChange={(e) => { setPayStatusFilter(e.target.value); fetchPayments(); }}
+                      className="w-full sm:w-48 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="success">Success</option>
+                      <option value="failed">Failed</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
+                  </div>
+                  <div className="mt-4 sm:mt-5">
+                    <button
+                      onClick={fetchPayments}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition"
+                    >
+                      🔄 Refresh
+                    </button>
+                  </div>
+                </div>
+
+                {/* Payment Dashboard Table */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="px-4 py-3.5">Transaction ID</th>
+                          <th className="px-4 py-3.5">Invoice #</th>
+                          <th className="px-4 py-3.5">Amount</th>
+                          <th className="px-4 py-3.5">Status</th>
+                          <th className="px-4 py-3.5">Date</th>
+                          <th className="px-4 py-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {payLoading ? (
+                          <tr>
+                            <td colSpan="6" className="px-4 py-8 text-center text-slate-400">Loading payments...</td>
+                          </tr>
+                        ) : payments.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="px-4 py-8 text-center text-slate-400">
+                              No payment transactions found. Use "Process Payment" to simulate one.
+                            </td>
+                          </tr>
+                        ) : (
+                          payments.map((pmt) => {
+                            const st = (pmt.status || '').toLowerCase();
+                            const badge =
+                              st === 'success' ? 'bg-emerald-100 text-emerald-700' :
+                              st === 'failed' ? 'bg-rose-100 text-rose-700' :
+                              st === 'refunded' ? 'bg-amber-100 text-amber-700' :
+                              'bg-slate-100 text-slate-600';
+                            return (
+                              <tr key={pmt.id} className="hover:bg-slate-50/70 transition">
+                                <td className="px-4 py-3 font-mono font-bold text-slate-900 text-[11px]">{pmt.payment_reference || pmt.id}</td>
+                                <td className="px-4 py-3 font-mono text-slate-700">{pmt.invoice_number || `INV-${pmt.invoice_id}`}</td>
+                                <td className="px-4 py-3 font-mono font-bold text-slate-900">₹{parseFloat(pmt.amount).toFixed(2)}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${badge}`}>
+                                    {pmt.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-slate-500">{pmt.created_at ? new Date(pmt.created_at).toLocaleDateString() : '-'}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => setSelectedPayment(pmt)}
+                                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
+                                  >
+                                    Details
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Quick Pay Buttons from pending invoices */}
+                {invoices.filter(inv => (inv.status || '').toLowerCase() === 'unpaid').length > 0 && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                    <h3 className="text-sm font-bold text-slate-800">⚡ Quick Pay — Pending Invoices</h3>
+                    <div className="space-y-2">
+                      {invoices.filter(inv => (inv.status || '').toLowerCase() === 'unpaid').map(inv => (
+                        <div key={inv.id} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs">
+                          <div>
+                            <span className="font-mono font-bold text-slate-900">{inv.invoice_number}</span>
+                            <span className="text-slate-500 ml-2">—  ₹{parseFloat(inv.total_amount).toFixed(2)}</span>
+                            <span className="ml-2 text-amber-600 font-semibold">Unpaid</span>
+                          </div>
+                          <button
+                            onClick={() => openProcessPaymentModal(inv)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition"
+                          >
+                            Pay Now
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Workflow Info Card */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3">📊 Payment Workflow</h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs text-slate-600">
+                    {['Invoice Generated','Process Payment','80% Success / 20% Failure','Webhook Sent','Invoice & Subscription Updated'].map((step, idx, arr) => (
+                      <React.Fragment key={step}>
+                        <span className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg font-semibold border border-indigo-100">{step}</span>
+                        {idx < arr.length - 1 && <span className="text-slate-400 font-bold hidden sm:inline">→</span>}
+                      </React.Fragment>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -952,6 +1193,172 @@ export default function App() {
                 {confirmLoading ? 'Applying...' : 'Confirm Upgrade'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROCESS PAYMENT MODAL (Task 3) */}
+      {isProcessModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">💳 Process Payment</h3>
+                <p className="text-xs text-slate-500">Simulate payment via mock gateway (80% success / 20% failure)</p>
+              </div>
+              <button
+                onClick={() => { setIsProcessModalOpen(false); setProcessResult(null); setProcessError(''); }}
+                className="text-slate-400 hover:text-slate-600 text-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            {processResult ? (
+              <div className={`p-4 rounded-xl border space-y-3 ${processResult.status === 'success' ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">{processResult.status === 'success' ? '✅' : '❌'}</span>
+                  <span className={`font-bold text-sm ${processResult.status === 'success' ? 'text-emerald-800' : 'text-rose-800'}`}>
+                    Payment {processResult.status === 'success' ? 'Successful' : 'Failed'}
+                  </span>
+                </div>
+                <div className="text-xs space-y-1.5 text-slate-700">
+                  <div className="flex justify-between"><span className="text-slate-500">Transaction ID:</span><span className="font-mono font-bold">{processResult.payment_reference}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Amount:</span><span className="font-mono font-bold">₹{parseFloat(processResult.amount).toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Invoice ID:</span><span className="font-mono">{processResult.invoice_id}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Webhook Event:</span><span className="font-semibold text-indigo-700">{processResult.webhook_event}</span></div>
+                  {processResult.message && (
+                    <div className="mt-2 text-[11px] text-slate-500 italic">{processResult.message}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setIsProcessModalOpen(false); setProcessResult(null); }}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleProcessPaymentSubmit} className="space-y-4">
+                {processError && (
+                  <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200">{processError}</div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice ID</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={processInvoiceId}
+                    onChange={(e) => setProcessInvoiceId(e.target.value)}
+                    placeholder="e.g. 1"
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Amount (₹)</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={processAmount}
+                    onChange={(e) => setProcessAmount(e.target.value)}
+                    placeholder="e.g. 499"
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">Simulation Mode</label>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'random', label: '🎲 Random (80% success, 20% fail)', badge: 'Default' },
+                      { value: 'success', label: '✅ Force Success', badge: null },
+                      { value: 'failure', label: '❌ Force Failure', badge: null }
+                    ].map((opt) => (
+                      <label
+                        key={opt.value}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer text-xs transition ${
+                          simulateMode === opt.value
+                            ? 'border-emerald-500 bg-emerald-50/40 ring-1 ring-emerald-500'
+                            : 'border-slate-200 hover:border-emerald-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name="sim-mode"
+                            value={opt.value}
+                            checked={simulateMode === opt.value}
+                            onChange={() => setSimulateMode(opt.value)}
+                            className="text-emerald-600"
+                          />
+                          <span className="text-slate-800 font-medium">{opt.label}</span>
+                        </div>
+                        {opt.badge && (
+                          <span className="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full font-semibold">{opt.badge}</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => { setIsProcessModalOpen(false); setProcessError(''); }}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={processLoading}
+                    className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition disabled:opacity-50"
+                  >
+                    {processLoading ? 'Processing...' : 'Process Payment'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT DETAILS MODAL (Task 3) */}
+      {selectedPayment && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Payment Details</h3>
+                <p className="text-xs text-slate-500">Transaction record and status</p>
+              </div>
+              <button onClick={() => setSelectedPayment(null)} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+            <div className="space-y-2.5 text-sm">
+              {[
+                { label: 'Invoice No', value: selectedPayment.invoice_number || `INV-${selectedPayment.invoice_id}`, mono: true },
+                { label: 'Amount', value: `₹${parseFloat(selectedPayment.amount).toFixed(2)}`, mono: true },
+                { label: 'Status', value: selectedPayment.status },
+                { label: 'Transaction ID', value: selectedPayment.payment_reference || selectedPayment.id, mono: true },
+                { label: 'Date of Payment', value: selectedPayment.created_at ? new Date(selectedPayment.created_at).toLocaleString() : '-' },
+              ].map(({ label, value, mono }) => (
+                <div key={label} className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
+                  <span className="text-slate-500 text-xs font-medium">{label}:</span>
+                  <span className={`${mono ? 'font-mono font-bold text-slate-900' : 'font-semibold text-slate-800'} text-xs`}>{value}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setSelectedPayment(null)}
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

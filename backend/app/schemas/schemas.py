@@ -222,6 +222,45 @@ class InvoiceResponse(BaseModel):
         from_attributes = True
 
 # ----------------- PAYMENT SCHEMAS -----------------
+class PaymentProcessRequest(BaseModel):
+    invoice_id: str
+    amount: Optional[Decimal] = None
+    payment_method: Optional[str] = "credit_card"
+    force_status: Optional[str] = None  # "success" or "failed"
+
+class PaymentWebhookPayload(BaseModel):
+    event: str  # "payment_success", "payment_failed", "payment_refunded"
+    invoice_id: str
+    payment_reference: Optional[str] = None
+    amount: Optional[Decimal] = None
+    failure_reason: Optional[str] = None
+
+class PaymentProcessResponse(BaseModel):
+    payment_id: str
+    payment_reference: str
+    invoice_id: str
+    invoice_number: str
+    amount: Decimal
+    status: PaymentStatus
+    payment_date: Optional[datetime] = None
+    failure_reason: Optional[str] = None
+    webhook_outcome: Optional[dict[str, Any]] = None
+
+class PaymentListItem(BaseModel):
+    id: str
+    payment_reference: str
+    invoice_id: str
+    invoice_number: Optional[str] = None
+    customer_name: Optional[str] = None
+    amount: Decimal
+    payment_method: str
+    status: PaymentStatus
+    payment_date: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class PaymentResponse(BaseModel):
     id: str
     invoice_id: str

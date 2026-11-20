@@ -211,6 +211,37 @@ A subscription and billing management system built with **FastAPI**, **PostgreSQ
 
 ---
 
+### Milestone 2 — Task 3: Mock Payment Gateway & Webhooks ✅
+* **Objective**: Simulate real payment processing without integrating an actual payment gateway.
+* **Requirements Completed**:
+  - **Mock Payment Processing**: `POST /api/v1/payments/process` with `{ "invoice_id": ..., "amount": ..., "simulate_mode": "random|success|failure" }`.
+    - 80% success / 20% failure probability (or deterministically forced via `simulate_mode`).
+    - Generates a unique `TXN-YYYYMMDD-XXXXXXXX` payment reference per transaction.
+    - Creates a `Payment` DB record with `status`, `amount`, `payment_reference`, and `created_at`.
+  - **Webhook Handler**: `POST /api/v1/webhooks/payment` processes 3 event types:
+    - `payment_success` → Invoice: `unpaid → paid` | Subscription: remains `active`.
+    - `payment_failed` → Invoice: `unpaid → failed` | Subscription: `active → past_due`.
+    - `payment_refunded` → Invoice: `paid → void` | Payment: `success → refunded`.
+  - **Payment Query Endpoints**:
+    - `GET /api/v1/payments`: List all payment records (filterable by `status`).
+    - `GET /api/v1/payments/{id}`: Retrieve full details of a single transaction.
+  - **Interactive Frontend (React App)**:
+    - **💳 Payments & Webhooks (M2-T3)** sidebar tab with full Payment Dashboard.
+    - Payment Dashboard table: Transaction ID | Invoice # | Amount | Status | Date | Details.
+    - **Process Payment modal**: Invoice ID, Amount, Simulation Mode (Random / Force Success / Force Failure).
+    - Post-payment result card: Transaction ID, Status, Webhook Event, Amount.
+    - **Quick Pay panel**: Auto-lists unpaid invoices with one-click "Pay Now" buttons.
+    - **Payment Details modal**: Full transaction record — Invoice No, Amount, Status, Transaction ID, Date.
+    - **Workflow info card**: Visual step-by-step pipeline display.
+  - **API Endpoints**:
+    - `POST /api/v1/payments/process`: Simulate a mock payment transaction.
+    - `POST /api/v1/webhooks/payment`: Handle webhook events and update invoice/subscription state.
+    - `GET /api/v1/payments`: Query all payment transactions.
+    - `GET /api/v1/payments/{id}`: Get individual payment details.
+* **Deliverable**: Payment Engine (`app/services/payment.py`), Endpoints (`app/api/endpoints/payments.py`, `app/api/endpoints/webhooks.py`), 7 automated unit tests (`tests/test_mock_payment_gateway.py`).
+
+---
+
 ## 🛠️ Project Structure
 
 ```text
@@ -224,15 +255,18 @@ backend/
 │   │   │   ├── customers.py             # Customer CRUD endpoints (Task 6)
 │   │   │   ├── invoices.py              # Milestone 2 Task 1 Invoice endpoints & PDF export
 │   │   │   ├── pages.py                 # Interactive HTML UI pages (Auth, Invoices, Subscriptions & Proration)
+│   │   │   ├── payments.py              # Milestone 2 Task 3 Payment processing & query endpoints
 │   │   │   ├── plans.py                 # Plan CRUD endpoints (Task 5)
-│   │   │   └── subscriptions.py         # Milestone 2 Task 2 Proration Preview & Plan Change APIs
+│   │   │   ├── subscriptions.py         # Milestone 2 Task 2 Proration Preview & Plan Change APIs
+│   │   │   └── webhooks.py              # Milestone 2 Task 3 Webhook event handler
 │   ├── core/                            # Configuration (.env) & Database engine (PostgreSQL/SQLAlchemy)
 │   ├── models/                          # 7 Core ORM models (Plans, Customers, Subscriptions, Invoices, etc.)
-│   ├── schemas/                         # Pydantic validation schemas (Proration, Invoices, etc.)
+│   ├── schemas/                         # Pydantic validation schemas (Proration, Invoices, Payments, etc.)
 │   ├── services/
 │   │   ├── audit.py                     # Task 10 Centralized audit logging service
 │   │   ├── billing_cycle.py             # Task 9 Billing cycle calculation service
 │   │   ├── invoice.py                   # Milestone 2 Task 1 Invoice generation & ReportLab PDF engine
+│   │   ├── payment.py                   # Milestone 2 Task 3 Mock payment engine & webhook handler
 │   │   ├── proration.py                 # Milestone 2 Task 2 Proration calculation & plan change engine
 │   │   └── state_machine.py             # Task 4 State Machine & transition logic
 │   └── main.py                          # FastAPI application entrypoint
@@ -243,6 +277,7 @@ backend/
 │   ├── test_customers_api.py            # Task 6 Customer API tests (3 tests)
 │   ├── test_database_schema.py          # Task 2 Schema inspection tests (9 tests)
 │   ├── test_invoice_generation.py       # Milestone 2 Task 1 Invoice tests (7 tests)
+│   ├── test_mock_payment_gateway.py     # Milestone 2 Task 3 Payment Gateway tests (7 tests)
 │   ├── test_plans_api.py                # Task 5 Plan API tests (4 tests)
 │   ├── test_proration_logic.py          # Milestone 2 Task 2 Proration tests (5 tests)
 │   ├── test_state_machine.py            # Task 4 State transition tests (9 tests)
@@ -297,6 +332,9 @@ python backend/tests/test_invoice_generation.py
 # Run Proration & Plan Change Tests (Milestone 2 Task 2 - 5 tests)
 python backend/tests/test_proration_logic.py
 
-# Or run all 59 tests together:
+# Run Mock Payment Gateway & Webhook Tests (Milestone 2 Task 3 - 7 tests)
+python backend/tests/test_mock_payment_gateway.py
+
+# Or run all 66 tests together:
 python -m unittest discover backend/tests
 ```
